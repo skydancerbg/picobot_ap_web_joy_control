@@ -46,10 +46,65 @@ async def handle(reader, writer, ws_handler_fn):
             elif path == '/health':
                 await _send_text(writer, 200, 'OK')
             elif path == '/status':
-                from PicoBot import safety, drive
+                from PicoBot import safety, drive, arm
+                b, a, c = arm.get_positions()
                 data = {
                     'armed': safety.is_armed(),
+                    'drive_ok': drive.is_ok(),
+                    'drive_err': drive._drive_init_error,
                     'wheels': drive.get_wheel_outputs(),
+                    'arm': {'base': b, 'arm': a, 'claw': c},
+                }
+                await _send_json(writer, data)
+            elif path == '/test_motor':
+                # Direct PCA9685 test — bypasses ARM/joystick/deadman.
+                # Commands FL motor (ch 0,1,2) at 30% forward for 1 second.
+                # Wheels must be LIFTED before calling this endpoint.
+                from PicoBot import drive, hardware_map as hw
+                result = {}
+                try:
+                    if not drive.is_ok():
+                        result = {'error': 'drive not initialized', 'detail': drive._drive_init_error}
+                    else:
+                        duty = int(0.30 * 4095)  # 30%
+                        fl = hw.MOTOR_FL_CHS      # (0, 1, 2)
+                        drive._pca.ch(fl[0], 0, duty)   # PWM 30%
+                        drive._pca.ch(fl[1], 0, 0)      # IN1 LOW  → forward
+                        drive._pca.ch(fl[2], 0, 4095)   # IN2 HIGH → forward
+                        await asyncio.sleep_ms(1000)
+                        drive.zero_all()
+                        result = {'status': 'FL motor 30% forward 1s — done', 'duty': duty}
+                except Exception as e:
+                    result = {'error': str(e)}
+                await _send_json(writer, result)
+            elif path == '/i2c':
+                from machine import I2C, Pin
+                from PicoBot import hardware_map as hw
+                try:
+                    i2c0 = I2C(hw.MOTOR_I2C_BUS,
+                               sda=Pin(hw.MOTOR_I2C_SDA),
+                               scl=Pin(hw.MOTOR_I2C_SCL),
+                               freq=hw.MOTOR_I2C_FREQ)
+                    motor_addrs = ['0x{:02x}'.format(a) for a in i2c0.scan()]
+                except Exception as e:
+                    motor_addrs = ['error: ' + str(e)]
+                try:
+                    i2c1 = I2C(hw.ARM_I2C_BUS,
+                               sda=Pin(hw.ARM_I2C_SDA),
+                               scl=Pin(hw.ARM_I2C_SCL),
+                               freq=hw.ARM_I2C_FREQ)
+                    arm_addrs = ['0x{:02x}'.format(a) for a in i2c1.scan()]
+                except Exception as e:
+                    arm_addrs = ['error: ' + str(e)]
+                data = {
+                    'motor_bus': hw.MOTOR_I2C_BUS,
+                    'motor_sda': hw.MOTOR_I2C_SDA,
+                    'motor_scl': hw.MOTOR_I2C_SCL,
+                    'motor_addrs': motor_addrs,
+                    'arm_bus': hw.ARM_I2C_BUS,
+                    'arm_sda': hw.ARM_I2C_SDA,
+                    'arm_scl': hw.ARM_I2C_SCL,
+                    'arm_addrs': arm_addrs,
                 }
                 await _send_json(writer, data)
             elif path == '/api/stop':

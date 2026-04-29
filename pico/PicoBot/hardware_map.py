@@ -96,13 +96,18 @@ ECHO_PIN  = 26  # GP26 — HC-SR04 Echo
 # set this to the GPIO number. Otherwise leave None.
 MOTOR_ENABLE_PIN = None  # NEEDS_PHYSICAL_CONF
 
-# Servo safe angle limits.
-# picobot_arm.py initialised servos to 90° and used full 0°–180° range
-# without mechanical limit calibration. Calibrate per dev plan §15.1
-# (step 5° from 90° until buzzing, back off 5–10°).
-SERVO_BASE_MIN = 20    # NEEDS_PHYSICAL_CONF
-SERVO_BASE_MAX = 160   # NEEDS_PHYSICAL_CONF
-SERVO_ARM_MIN  = 20    # NEEDS_PHYSICAL_CONF
-SERVO_ARM_MAX  = 160   # NEEDS_PHYSICAL_CONF
-SERVO_CLAW_MIN = 20    # NEEDS_PHYSICAL_CONF
-SERVO_CLAW_MAX = 160   # NEEDS_PHYSICAL_CONF
+# Servo safe angle limits — VERIFIED_FROM_WORKING_REPO (picobot_main.py)
+# Base: full 0–180° range (no mechanical obstruction).
+# Arm and claw: restricted to 40–140° to avoid hardware damage.
+# Home position: 90° for all three (centre of travel).
+SERVO_BASE_MIN  =   0   # VERIFIED_FROM_WORKING_REPO
+SERVO_BASE_MAX  = 180   # VERIFIED_FROM_WORKING_REPO
+SERVO_BASE_HOME =  90   # VERIFIED_FROM_WORKING_REPO
+
+SERVO_ARM_MIN   =  40   # VERIFIED_FROM_WORKING_REPO
+SERVO_ARM_MAX   = 140   # VERIFIED_FROM_WORKING_REPO
+SERVO_ARM_HOME  =  90   # VERIFIED_FROM_WORKING_REPO
+
+SERVO_CLAW_MIN  =  40   # VERIFIED_FROM_WORKING_REPO
+SERVO_CLAW_MAX  = 140   # VERIFIED_FROM_WORKING_REPO
+SERVO_CLAW_HOME =  90   # VERIFIED_FROM_WORKING_REPO

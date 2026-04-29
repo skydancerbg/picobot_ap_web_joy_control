@@ -59,12 +59,12 @@ def _angle_to_us(angle_deg):
 
 _pca = None
 
-_cur_base = 90.0
-_cur_arm  = 90.0
-_cur_claw = 90.0
+_cur_base = float(hw.SERVO_BASE_HOME)
+_cur_arm  = float(hw.SERVO_ARM_HOME)
+_cur_claw = float(hw.SERVO_CLAW_HOME)
 
-_tgt_base = 90.0
-_tgt_arm  = 90.0
+_tgt_base = float(hw.SERVO_BASE_HOME)
+_tgt_arm  = float(hw.SERVO_ARM_HOME)
 _tgt_claw = None   # None until first A frame with real claw value
 
 _last_tick_ms = 0
@@ -91,10 +91,17 @@ def init():
                   freq=hw.ARM_I2C_FREQ)
         _pca = PCA9685(i2c, hw.ARM_PCA_ADDR)
         _pca.set_freq(hw.ARM_PCA_FREQ)
-        for _, (ch, mn, mx, _) in _SERVO_CFG.items():
-            home = max(mn, min(mx, 90))
+        homes = {
+            'base': hw.SERVO_BASE_HOME,
+            'arm':  hw.SERVO_ARM_HOME,
+            'claw': hw.SERVO_CLAW_HOME,
+        }
+        for name, (ch, mn, mx, _) in _SERVO_CFG.items():
+            home = max(mn, min(mx, homes[name]))
             _pca.set_us(ch, _angle_to_us(home))
-        _cur_base = _cur_arm = _cur_claw = 90.0
+        _cur_base = float(hw.SERVO_BASE_HOME)
+        _cur_arm  = float(hw.SERVO_ARM_HOME)
+        _cur_claw = float(hw.SERVO_CLAW_HOME)
         _last_tick_ms = time.ticks_ms()
         print("arm: PCA9685 OK (I2C bus", hw.ARM_I2C_BUS, "SDA=GP", hw.ARM_I2C_SDA, "SCL=GP", hw.ARM_I2C_SCL, ")")
     except Exception as e:
@@ -102,15 +109,23 @@ def init():
         _pca = None
 
 
+def _clamp(val, mn, mx, name):
+    v = float(val)
+    c = max(mn, min(mx, v))
+    if c != v:
+        print("arm: clamp", name, v, "→", c)
+    return c
+
+
 def set_targets(base, arm_angle, claw):
-    """Update servo targets from an A frame. -1 = no-change."""
+    """Update servo targets from an A frame. -1 = no-change. Values clamped to safe limits."""
     global _tgt_base, _tgt_arm, _tgt_claw
     if base != -1:
-        _tgt_base = float(base)
+        _tgt_base = _clamp(base, hw.SERVO_BASE_MIN, hw.SERVO_BASE_MAX, 'base')
     if arm_angle != -1:
-        _tgt_arm = float(arm_angle)
+        _tgt_arm = _clamp(arm_angle, hw.SERVO_ARM_MIN, hw.SERVO_ARM_MAX, 'arm')
     if claw != -1:
-        _tgt_claw = float(claw)
+        _tgt_claw = _clamp(claw, hw.SERVO_CLAW_MIN, hw.SERVO_CLAW_MAX, 'claw')
 
 
 def get_positions():

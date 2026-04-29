@@ -693,7 +693,19 @@ Servo telemetry is estimated, not measured.
 
 ### 15.1 Required SAFE_MIN / SAFE_MAX calibration
 
-For every servo:
+**Status: Servo travel-limit implementation complete; physical verification pending.**
+
+Limits extracted from the tested working repo (`picobot_main.py`) and enforced in both firmware and UI:
+
+| Servo | SAFE_MIN | SAFE_MAX | HOME |
+|-------|:--------:|:--------:|:----:|
+| Base  | 0°       | 180°     | 90°  |
+| Arm   | 40°      | 140°     | 90°  |
+| Claw  | 40°      | 140°     | 90°  |
+
+These values are set in `hardware_map.py` (`SERVO_*_MIN/MAX/HOME`), clamped in `arm.py` `set_targets()`, and reflected in UI slider `min`/`max` attributes. See `TEST_LOG.md` for pending physical verification steps.
+
+If physical testing reveals buzzing or binding within these ranges, re-calibrate per the procedure below and update `hardware_map.py`:
 
 ```text
 1. Start at 90°.
@@ -775,13 +787,19 @@ First touched joystick owns drive. Other ignored until release. Release sends ST
 
 Enable base servo with calibrated safe limits and non-blocking planner. Motor STOP must still work while servo moves.
 
+**Partial:** Servo travel limits (0–180°, home 90°) implemented in firmware and UI. Milestone pass remains pending until real-robot servo-limit verification is performed (see `TEST_LOG.md` pending entry).
+
 ### Milestone 9 — Arm servo
 
 Enable arm raise/lower with safe limits, velocity limit, acceleration limit, and no buzz.
 
+**Partial:** Servo travel limits (40–140°, home 90°) implemented in firmware and UI. Milestone pass remains pending until real-robot servo-limit verification is performed.
+
 ### Milestone 10 — Gripper
 
 Enable claw with safe open/close range and `-1` no-change sentinel until user touches slider.
+
+**Partial:** Servo travel limits (40–140°, home 90°) implemented in firmware and UI. Milestone pass remains pending until real-robot servo-limit verification is performed.
 
 ### Milestone 11 — Telemetry
 

@@ -12,7 +12,7 @@ All frames are comma-delimited UTF-8 text. Max frame length: 64 bytes.
 | `ARM,seq,0` | Disarm motors (always honored) |
 | `ARM,seq,1` | Arm motors (rejected if safety checks fail) |
 | `D,seq,f,s,r` | Drive: forward(−100..100), strafe(−100..100), rotate(−100..100) |
-| `A,seq,base,arm,claw` | Arm target angles; −1 = no-change |
+| `A,seq,base,arm,claw` | Arm target angles; −1 = no-change; out-of-range values are clamped by firmware without returning a protocol error (with debug logging enabled, firmware prints requested and clamped values to serial) |
 | `M,seq,move_id,speed` | Start show-off move |
 | `STOP,seq` | Emergency stop (always honored) |
 | `CFG,seq,key,value` | Runtime config (e.g. `CFG,1,debug,1`) |

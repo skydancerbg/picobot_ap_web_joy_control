@@ -227,3 +227,47 @@ All of the following must be true before moving to Milestone 2:
 ---
 
 <!-- Add test entries below this line -->
+
+---
+
+## Milestones 8–10 — Servo Travel-Limit Verification (PENDING)
+
+**Status:** Servo travel-limit implementation complete; physical verification pending.
+
+Servo limits extracted from the tested working repo and enforced in firmware (`arm.py` `set_targets()`) and UI (slider attributes + JS clamp). This entry captures the required hardware verification steps. Fill in Actual / Pass columns during the next robot session.
+
+```
+Date:
+Milestone: 8–10 (servo limit physical verification)
+Firmware commit:
+Web page commit:
+Pico target: Pico W / Pico 2 W
+Battery voltage:
+Phone / browser:
+Tested feature: Servo travel limits — base 0–180°, arm 40–140°, claw 40–140°
+Expected result: No servo exceeds its limits; no buzzing or binding at endpoints; Centre Arm sends 90,90,90
+Actual result:
+Pass / fail:
+Browser console excerpt (with timestamp):
+Pico serial excerpt (with timestamp):
+Notes:
+Next action:
+```
+
+### Verification Checklist
+
+| # | Check | Expected | Actual | Pass? |
+|---|-------|----------|--------|-------|
+| 1 | Tap "Centre Arm (90°)" button | Serial: `A,seq,90,90,90` sent; all sliders snap to 90 | | |
+| 2 | Drag base slider to 0 and 180 | Servo reaches both ends; no buzzing | | |
+| 3 | Base never commanded below 0° | Slider min=0, JS clamp confirmed in browser console | | |
+| 4 | Base never commanded above 180° | Slider max=180, JS clamp confirmed | | |
+| 5 | Drag arm slider to 40 and 140 | Servo reaches both ends; no buzzing or binding | | |
+| 6 | Arm never commanded below 40° | Slider min=40, JS clamp + firmware clamp | | |
+| 7 | Arm never commanded above 140° | Slider max=140, JS clamp + firmware clamp | | |
+| 8 | Drag claw slider to 40 and 140 | Servo reaches both ends; no buzzing or binding | | |
+| 9 | Claw never commanded below 40° | Slider min=40, JS clamp + firmware clamp | | |
+| 10 | Claw never commanded above 140° | Slider max=140, JS clamp + firmware clamp | | |
+| 11 | Send invalid frame `A,seq,999,-20,300` via browser console | Serial prints: `arm: clamp base 999.0 → 180`, `arm: clamp arm -20.0 → 40`, `arm: clamp claw 300.0 → 140` | | |
+| 12 | Motor STOP still works while a servo is moving | `sendStop()` halts drive immediately | | |
+| 13 | No buzzing or binding at any servo endpoint | All three servos quiet at limits | | |

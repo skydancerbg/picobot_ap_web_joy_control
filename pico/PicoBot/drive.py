@@ -23,6 +23,7 @@ class _PCA:
     def __init__(self, i2c, addr):
         self._i2c = i2c
         self._addr = addr
+        self._w(self._MODE1, 0x00)  # clear SLEEP; arm.py PCA9685 does the same in _reset()
 
     def _w(self, reg, val):
         self._i2c.writeto_mem(self._addr, reg, bytes([val]))
@@ -31,14 +32,13 @@ class _PCA:
         return self._i2c.readfrom_mem(self._addr, reg, 1)[0]
 
     def set_freq(self, freq):
-        import math
         prescale = int(25_000_000.0 / 4096.0 / freq + 0.5)
         old = self._r(self._MODE1)
         self._w(self._MODE1, (old & 0x7F) | 0x10)
         self._w(self._PRESCALE, prescale)
         self._w(self._MODE1, old)
         import time; time.sleep_ms(5)
-        self._w(self._MODE1, old | 0x80)
+        self._w(self._MODE1, old | 0xA0)   # RESTART + AI (auto-increment for bulk writes)
 
     def ch(self, channel, on, off):
         base = self._LED0_ON_L + 4 * channel
@@ -95,29 +95,36 @@ def _pct_to_duty(pct):
 _pca = None
 _fl = _bl = _fr = _br = None
 _out_fl = _out_bl = _out_fr = _out_br = 0
+_drive_ok = False
+_drive_init_error = ''
+
+
+def is_ok():
+    return _drive_ok
 
 
 def init():
-    """
-    Create the motor PCA9685 instance.
-    If MOTOR_I2C_BUS is None (I2C conflict not yet resolved), all motors
-    run in simulation mode (no I2C, no movement).
-    """
-    global _pca, _fl, _bl, _fr, _br
+    global _pca, _fl, _bl, _fr, _br, _drive_ok, _drive_init_error
+
+    _drive_ok = False
+    _drive_init_error = ''
 
     if hw.MOTOR_I2C_BUS is None:
-        print("drive: MOTOR_I2C_* not confirmed — simulation mode (no motor output)")
+        _drive_init_error = 'MOTOR_I2C_BUS is None'
+        print("drive: sim mode —", _drive_init_error)
         _pca = None
     else:
         try:
             i2c = I2C(hw.MOTOR_I2C_BUS,
                       sda=Pin(hw.MOTOR_I2C_SDA),
                       scl=Pin(hw.MOTOR_I2C_SCL),
-                      freq=hw.MOTOR_I2C_CANDIDATE_FREQ)
+                      freq=hw.MOTOR_I2C_FREQ)
             _pca = _PCA(i2c, hw.MOTOR_PCA_ADDR)
             _pca.set_freq(hw.MOTOR_PCA_FREQ)
+            _drive_ok = True
             print("drive: motor PCA9685 OK")
         except Exception as e:
+            _drive_init_error = str(e)
             print("drive: motor PCA9685 init failed:", e)
             _pca = None
 

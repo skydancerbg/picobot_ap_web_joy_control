@@ -133,18 +133,18 @@ Common candidates for this channel layout: DRV8833, TB6612FNG, L293D.
 
 ---
 
-## Servo Safe Angle Limits — NEEDS_PHYSICAL_CONF
+## Servo Safe Angle Limits — VERIFIED_FROM_WORKING_REPO
 
-`picobot_arm.py` used full 0°–180° range without mechanical calibration.  
-Calibrate per dev plan §15.1 before enabling servo control in the new firmware.
+Extracted from `picobot_main.py` in the reference working repository.  
+These limits are enforced in both firmware (`arm.py` `set_targets()`) and UI (slider `min`/`max` attributes + JS clamp).
 
-| Servo | SAFE_MIN | SAFE_MAX |
-|-------|:--------:|:--------:|
-| Base | TODO | TODO |
-| Arm | TODO | TODO |
-| Claw | TODO | TODO |
+| Servo | SAFE_MIN | SAFE_MAX | HOME |
+|-------|:--------:|:--------:|:----:|
+| Base  | 0°       | 180°     | 90°  |
+| Arm   | 40°      | 140°     | 90°  |
+| Claw  | 40°      | 140°     | 90°  |
 
-Update `SERVO_*_MIN / SERVO_*_MAX` in `hardware_map.py` when done.
+Constants in `hardware_map.py`: `SERVO_BASE_MIN/MAX/HOME`, `SERVO_ARM_MIN/MAX/HOME`, `SERVO_CLAW_MIN/MAX/HOME`.
 
 ---
 

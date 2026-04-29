@@ -40,13 +40,13 @@ def _rseq():
 
 def _start_wifi():
     ap = network.WLAN(network.AP_IF)
-    ap.active(True)
+    ap.active(False)
     ap.config(
         ssid=config.WIFI_SSID,
         password=config.WIFI_PASSWORD,
         channel=config.WIFI_CHANNEL,
-        authmode=network.AUTH_WPA_WPA2_PSK,
     )
+    ap.active(True)
     t = time.ticks_ms()
     while not ap.active():
         if time.ticks_diff(time.ticks_ms(), t) > 10000:
@@ -257,9 +257,16 @@ async def _app_run():
 def main():
     _start_wifi()
 
-    wdt = WDT(timeout=config.WDT_TIMEOUT_MS)
+    wdt = WDT(timeout=config.WDT_TIMEOUT_MS) if config.ENABLE_WDT else None
+
+    async def _wdt_feed():
+        while True:
+            if wdt is not None:
+                wdt.feed()
+            await asyncio.sleep_ms(500)
 
     async def supervisor():
+        asyncio.create_task(_wdt_feed())
         while True:
             try:
                 await _app_run()
@@ -267,7 +274,5 @@ def main():
                 safety.hard_disable()
                 print("FATAL:", exc)
                 await asyncio.sleep_ms(1000)
-            wdt.feed()
-            await asyncio.sleep_ms(100)
 
     asyncio.run(supervisor())

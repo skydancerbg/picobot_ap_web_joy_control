@@ -115,13 +115,14 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:22px;height:22px;b
     </div>
     <div class="servo-row">
       <label>Arm raise/lower <span id="arm-val">90°</span></label>
-      <input type="range" id="arm-slider" min="0" max="180" value="90" oninput="onServo('arm',this)">
+      <input type="range" id="arm-slider" min="40" max="140" value="90" oninput="onServo('arm',this)">
     </div>
     <div class="servo-row">
       <label>Gripper <span id="claw-val">—</span></label>
-      <input type="range" id="claw-slider" min="0" max="180" value="90" oninput="onServo('claw',this)">
+      <input type="range" id="claw-slider" min="40" max="140" value="90" oninput="onServo('claw',this)">
     </div>
     <p style="font-size:11px;color:#475569;margin-top:8px">Gripper value sent only after first touch.</p>
+    <button class="btn" style="margin-top:12px;width:100%;padding:10px" onclick="centreArm()">Centre Arm (90°)</button>
   </div>
 
   <!-- Moves -->
@@ -178,6 +179,17 @@ input[type=range]::-webkit-slider-thumb{appearance:none;width:22px;height:22px;b
 const WS_URL = 'ws://' + location.hostname + '/ws';
 const DRIVE_HZ   = 20;    // Hz while joystick active
 const HEARTBEAT_HZ = 5;   // Hz while stick touched but centered
+
+// Servo safe limits — must match hardware_map.py
+const SERVO_LIMITS = {
+  base: { min: 0,  max: 180, home: 90 },
+  arm:  { min: 40, max: 140, home: 90 },
+  claw: { min: 40, max: 140, home: 90 },
+};
+function clampServo(axis, val) {
+  const l = SERVO_LIMITS[axis];
+  return Math.max(l.min, Math.min(l.max, val));
+}
 
 // ── state ─────────────────────────────────────────────────────────────────────
 let sock = null;
@@ -257,6 +269,9 @@ function toggleArm() {
 }
 
 function resetArm() {
+  stopHeartbeat();
+  stopDriveLoop();
+  driveOwner = null;
   if (armed) {
     send(`STOP,${nextSeq()}`);
     send(`ARM,${nextSeq()},0`);
@@ -273,6 +288,9 @@ function setArmedUI(val) {
 }
 
 function sendStop() {
+  stopHeartbeat();
+  stopDriveLoop();
+  driveOwner = null;
   send(`STOP,${nextSeq()}`);
   send(`ARM,${nextSeq()},0`);
   setArmedUI(false);
@@ -438,7 +456,9 @@ function onJoyRelease(side) {
   if (driveOwner !== side) return;
   stopDriveLoop();
   driveOwner = null;
-  send(`STOP,${nextSeq()}`);
+  // Send zero drive frame to stop motors immediately — do NOT send STOP
+  // (STOP also disarms, requiring re-ARM before next joystick use).
+  send(`D,${nextSeq()},0,0,0`);
 
   // If other joystick is still touched, it takes over
   const other = side === 'left' ? 'right' : 'left';
@@ -446,10 +466,9 @@ function onJoyRelease(side) {
     driveOwner = other;
     startDriveLoop();
   } else {
+    // Keep heartbeat running indefinitely while armed so deadman stays alive.
+    // Heartbeat is stopped only by sendStop() or resetArm() (disconnect/disarm).
     startHeartbeat();
-    setTimeout(() => {
-      if (driveOwner === null) stopHeartbeat();
-    }, 500);
   }
 }
 
@@ -462,11 +481,21 @@ function onServo(axis, el) {
 }
 
 function sendArm() {
-  const base = armInit.base  ? parseInt(document.getElementById('base-slider').value) : -1;
-  const arm  = armInit.arm   ? parseInt(document.getElementById('arm-slider').value)  : -1;
-  const claw = armInit.claw  ? parseInt(document.getElementById('claw-slider').value) : -1;
+  const base = armInit.base  ? clampServo('base', parseInt(document.getElementById('base-slider').value)) : -1;
+  const arm  = armInit.arm   ? clampServo('arm',  parseInt(document.getElementById('arm-slider').value))  : -1;
+  const claw = armInit.claw  ? clampServo('claw', parseInt(document.getElementById('claw-slider').value)) : -1;
   if (base === -1 && arm === -1 && claw === -1) return;
   send(`A,${nextSeq()},${base},${arm},${claw}`);
+}
+
+function centreArm() {
+  ['base', 'arm', 'claw'].forEach(axis => {
+    const home = SERVO_LIMITS[axis].home;
+    document.getElementById(axis + '-slider').value = home;
+    document.getElementById(axis + '-val').textContent = home + '°';
+    armInit[axis] = true;
+  });
+  send(`A,${nextSeq()},${SERVO_LIMITS.base.home},${SERVO_LIMITS.arm.home},${SERVO_LIMITS.claw.home}`);
 }
 
 // ── show-off moves ────────────────────────────────────────────────────────────

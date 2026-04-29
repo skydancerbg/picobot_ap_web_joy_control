@@ -4,9 +4,10 @@ WIFI_PASSWORD = "picobot123"
 WIFI_CHANNEL = 6
 
 # Safety
-DEADMAN_MS = 250          # ms without a D frame before motors cut
+DEADMAN_MS = 2000         # ms without D frame before motors cut (250 for production; 2000 for testing)
 DEADMAN_TICK_MS = 20      # Timer period for deadman check
-WDT_TIMEOUT_MS = 2000     # WDT timeout
+ENABLE_WDT = False        # set True only after all loops confirmed WDT-safe
+WDT_TIMEOUT_MS = 8000     # WDT timeout (ms) — generous for debugging
 
 # Telemetry
 TELEMETRY_INTERVAL_MS = 200   # 5 Hz

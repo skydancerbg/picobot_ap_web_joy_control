@@ -15,7 +15,7 @@ Raspberry Pi Pico W robot controller. The Pico serves an HTML/JS UI over its own
 ## Quick Start
 
 1. Connect Pico via usbip: device appears at `/dev/ttyACM0`.
-2. Calibrate servo safe ranges on the robot (see `HARDWARE_MAP.md` NEEDS_PHYSICAL_CONF items).
+2. Verify servo travel limits on the robot (see `TEST_LOG.md` Milestones 8–10 pending entry). Default limits from working repo: base 0–180°, arm 40–140°, claw 40–140°. Update `hardware_map.py` if physical testing reveals tighter constraints.
 3. Compile to `.mpy` (see `tools/compile_mpy.md`) — skip for debug uploads.
 4. Upload files listed in `PICO_UPLOAD_MANIFEST.md` using `tools/upload_to_pico.md`.
 5. Connect phone to `PicoBot` Wi-Fi, open `http://192.168.4.1/`.
@@ -42,7 +42,7 @@ See `picobot_web_control_dev_plan.md` § 22 for the full milestone sequence.
 - [ ] Page hidden sends `STOP` then `ARM,0` — confirmed.
 - [ ] Joystick release sends zero-heartbeat then STOP on lift — confirmed.
 - [ ] Servo rail power confirmed (not from Pico 3V3 or VBUS).
-- [ ] Servo `SAFE_MIN` / `SAFE_MAX` calibrated for all three servos.
+- [ ] Servo travel limits physically verified: base 0–180°, arm 40–140°, claw 40–140° (implementation complete; physical verification pending — see `TEST_LOG.md`).
 - [ ] Wheels lifted, low-speed motor test passed.
 
 ## Files Never Uploaded to Pico

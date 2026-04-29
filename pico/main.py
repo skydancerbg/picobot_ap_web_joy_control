@@ -22,7 +22,5 @@ for _pin_no in MOTOR_INPUT_PINS:
 if MOTOR_ENABLE_PIN is not None:
     Pin(MOTOR_ENABLE_PIN, Pin.OUT, value=0)
 
-del _pin_no  # keep namespace clean
-
 from PicoBot.app import main
 main()
