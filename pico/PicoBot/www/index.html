@@ -5,446 +5,537 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>PicoBot</title>
 <style>
+/* reset */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
-html,body{width:100%;height:100%;background:#0f172a;color:#e2e8f0;font-family:monospace;overflow:hidden;display:flex;flex-direction:column}
+html,body{width:100%;height:100%;overflow:hidden;background:#04040e}
 
-/* ── header ── */
-#hdr{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#1e293b;border-bottom:1px solid #334155;flex-shrink:0;min-height:44px}
-#hdr-title{font-size:16px;font-weight:bold;color:#e2e8f0;margin-right:auto}
-#dot{width:10px;height:10px;border-radius:50%;background:#475569;flex-shrink:0}
-#dot.connecting{background:#f59e0b;animation:blink .8s infinite}
-#dot.connected{background:#22c55e}
-#dot.error{background:#ef4444}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.btn{padding:5px 10px;border:1px solid #334155;border-radius:6px;background:#1e293b;color:#e2e8f0;font:inherit;font-size:12px;cursor:pointer;touch-action:manipulation}
-.btn:active{background:#334155}
-#arm-btn{min-width:80px;font-weight:bold}
-#arm-btn.armed{background:#166534;border-color:#22c55e;color:#4ade80}
-#stop-btn{background:#7f1d1d;border-color:#ef4444;color:#fca5a5;font-weight:bold}
+/* neon palette */
+:root{
+  --bg0:#04040e;--bg1:#090916;--bg2:#0f1425;--bg3:#182030;
+  --cy:#00d8ff;--cy-d:rgba(0,216,255,.1);
+  --gn:#00ff80;--gn-d:rgba(0,255,128,.1);
+  --rd:#ff2040;--rd-d:rgba(255,32,64,.1);
+  --am:#ffaa00;
+  --tx:#8aa0bc;--txh:#d0e8ff;--dm:#253545;
+}
+body{display:flex;flex-direction:column;color:var(--tx);font-family:monospace}
 
-/* ── tabs ── */
-#tabs{display:flex;background:#1e293b;border-bottom:1px solid #334155;flex-shrink:0}
-.tab{flex:1;padding:8px 4px;text-align:center;font:12px monospace;color:#94a3b8;border-bottom:2px solid transparent;cursor:pointer}
-.tab.active{color:#3b82f6;border-bottom-color:#3b82f6}
+/* splash */
+#splash{
+  position:fixed;inset:0;z-index:200;background:var(--bg0);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  cursor:pointer;transition:opacity .6s;
+}
+#splash.gone{opacity:0;pointer-events:none}
+.sp-logo{
+  font-size:clamp(38px,11vw,76px);font-weight:900;
+  color:var(--cy);letter-spacing:.2em;
+  text-shadow:0 0 24px var(--cy),0 0 50px rgba(0,216,255,.5);
+  animation:sp-pulse 2s ease-in-out infinite;
+}
+.sp-sub{font-size:clamp(9px,2.6vw,13px);color:var(--dm);letter-spacing:.28em}
+.sp-hint{font-size:clamp(9px,2.4vw,12px);color:var(--cy);letter-spacing:.2em;animation:blink .95s step-start infinite}
+@keyframes sp-pulse{
+  0%,100%{text-shadow:0 0 24px var(--cy),0 0 50px rgba(0,216,255,.5)}
+  50%{text-shadow:0 0 36px var(--cy),0 0 70px rgba(0,216,255,.8)}
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
-/* ── tab content ── */
-#content{flex:1;overflow:hidden;position:relative}
-.panel{position:absolute;inset:0;display:none;flex-direction:column}
+/* app wrapper */
+#app{
+  display:flex;flex-direction:column;width:100%;height:100%;
+  opacity:0;transition:opacity .5s;pointer-events:none;
+}
+#app.up{opacity:1;pointer-events:auto}
+
+/* topbar */
+#topbar{
+  display:flex;align-items:center;gap:6px;padding:0 10px;
+  height:44px;flex-shrink:0;background:var(--bg1);
+  border-bottom:1px solid var(--cy);
+  box-shadow:0 1px 14px rgba(0,216,255,.18);
+}
+.tb-title{
+  font-size:14px;font-weight:bold;color:var(--cy);letter-spacing:.2em;
+  text-shadow:0 0 10px rgba(0,216,255,.7);margin-right:auto;
+}
+#conn-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0}
+#dot{
+  width:8px;height:8px;border-radius:50%;background:var(--dm);
+  flex-shrink:0;transition:background .3s,box-shadow .3s;
+}
+#dot.connecting{background:var(--am);box-shadow:0 0 6px var(--am);animation:blink .8s step-start infinite}
+#dot.connected{background:var(--gn);box-shadow:0 0 8px var(--gn)}
+#dot.error{background:var(--rd);box-shadow:0 0 8px var(--rd)}
+#conn-lbl{font-size:9px;color:var(--dm);letter-spacing:.06em;flex-shrink:0}
+.tb-btn{
+  padding:4px 9px;border:1px solid var(--dm);border-radius:3px;
+  background:transparent;color:var(--tx);font:10px/1 monospace;
+  letter-spacing:.06em;cursor:pointer;touch-action:manipulation;
+  transition:border-color .2s,color .2s,box-shadow .2s;flex-shrink:0;
+}
+.tb-btn:active{background:var(--bg3)}
+#arm-btn.armed{border-color:var(--gn);color:var(--gn);box-shadow:0 0 8px rgba(0,255,128,.4)}
+#stop-btn{border-color:var(--rd);color:var(--rd);box-shadow:0 0 6px rgba(255,32,64,.3);font-weight:bold}
+#stop-btn:active{box-shadow:0 0 14px rgba(255,32,64,.7)}
+
+/* tabbar */
+#tabbar{display:flex;flex-shrink:0;background:var(--bg1);border-bottom:1px solid var(--bg3)}
+.tab{
+  flex:1;padding:8px 4px;text-align:center;
+  font:11px/1 monospace;letter-spacing:.12em;color:var(--dm);
+  border-bottom:2px solid transparent;cursor:pointer;touch-action:manipulation;
+  transition:color .2s,border-color .2s,text-shadow .2s;
+}
+.tab.active{color:var(--cy);border-bottom-color:var(--cy);text-shadow:0 0 8px rgba(0,216,255,.6)}
+
+/* content */
+#content{flex:1;position:relative;overflow:hidden;min-height:0}
+.panel{position:absolute;inset:0;display:none}
 .panel.active{display:flex}
 
-/* ── drive panel ── */
-#drive-panel{flex-direction:row;align-items:center;justify-content:space-around;padding:12px}
-.joy-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
-.joy-label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
-.joy-ring{position:relative;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,#1e293b 0%,#0f172a 100%);border:2px solid #334155;flex-shrink:0;touch-action:none}
-.joy-knob{position:absolute;top:50%;left:50%;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle,#60a5fa,#2563eb);transform:translate(-50%,-50%);box-shadow:0 0 12px #3b82f660;pointer-events:none}
-.joy-ring.armed .joy-knob{background:radial-gradient(circle,#4ade80,#16a34a)}
-.joy-ring.active .joy-knob{box-shadow:0 0 20px #3b82f6aa}
-#drive-info{font-size:11px;color:#475569;text-align:center;line-height:1.8}
+/* control panel */
+#control-panel{flex-direction:row;align-items:stretch}
 
-/* ── arm panel ── */
-#arm-panel{padding:20px;gap:16px}
-.servo-row{display:flex;flex-direction:column;gap:6px}
-.servo-row label{font-size:12px;color:#94a3b8;display:flex;justify-content:space-between}
-.servo-row label span{color:#e2e8f0}
-input[type=range]{width:100%;accent-color:#3b82f6;height:6px;appearance:none;background:#334155;border-radius:3px}
-input[type=range]::-webkit-slider-thumb{appearance:none;width:22px;height:22px;border-radius:50%;background:#3b82f6;cursor:pointer}
+/* zones */
+#left-zone,#right-zone{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:8px;padding:8px;min-width:0;
+}
+#left-zone{border-right:1px solid var(--bg3)}
 
-/* ── moves panel ── */
-#moves-panel{padding:16px;gap:12px;overflow-y:auto;touch-action:pan-y}
-#move-speed-row{display:flex;align-items:center;gap:10px;font-size:12px;color:#94a3b8}
-#move-speed-row input{flex:1}
-#move-speed-val{color:#e2e8f0;min-width:30px;text-align:right}
-#moves-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.move-btn{padding:14px 8px;border:1px solid #334155;border-radius:8px;background:#1e293b;color:#94a3b8;font:11px monospace;text-align:center;cursor:pointer;transition:background .15s}
-.move-btn:active,.move-btn.running{background:#1d4ed8;border-color:#3b82f6;color:#bfdbfe}
+/* mode switch */
+#mode-sw{
+  display:flex;border:1px solid var(--dm);border-radius:5px;
+  overflow:hidden;flex-shrink:0;
+}
+.mode-btn{
+  flex:1;padding:5px 12px;background:transparent;border:none;
+  color:var(--dm);font:9px/1 monospace;letter-spacing:.12em;
+  cursor:pointer;touch-action:manipulation;transition:background .2s,color .2s;
+}
+.mode-btn.on{background:var(--cy-d);color:var(--cy)}
 
-/* ── info panel ── */
-#info-panel{padding:16px;gap:12px;overflow-y:auto;touch-action:pan-y;font-size:12px}
-.info-section{background:#1e293b;border-radius:8px;padding:12px;border:1px solid #334155}
-.info-section h3{color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-.kv{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #1e293b}
-.kv:last-child{border-bottom:none}
-.kv .k{color:#94a3b8}
-.kv .v{color:#e2e8f0;font-weight:bold}
+/* strafe context */
+#ctx-strafe{display:flex;flex-direction:column;align-items:center;gap:6px}
 
-/* ── toast ── */
-#toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#334155;color:#e2e8f0;padding:6px 14px;border-radius:20px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99}
+/* arm joy context */
+#ctx-armjoy{display:flex;flex-direction:column;gap:10px;width:100%;align-self:stretch}
+.sv-row{display:flex;flex-direction:column;gap:3px}
+.sv-hd{
+  font-size:9px;color:var(--dm);letter-spacing:.08em;
+  display:flex;justify-content:space-between;
+}
+.sv-hd em{font-style:normal;color:var(--cy);font-size:10px}
+input[type=range]{
+  width:100%;height:3px;appearance:none;-webkit-appearance:none;
+  background:var(--bg3);border-radius:2px;touch-action:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  appearance:none;-webkit-appearance:none;width:18px;height:18px;
+  border-radius:50%;background:var(--cy);box-shadow:0 0 8px var(--cy);cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width:18px;height:18px;border-radius:50%;background:var(--cy);
+  box-shadow:0 0 8px var(--cy);cursor:pointer;border:none;
+}
+.sv-note{font-size:8px;color:var(--dm)}
+.arm-ctr{
+  padding:7px;border:1px solid var(--cy);border-radius:4px;
+  background:var(--cy-d);color:var(--cy);font:9px/1 monospace;
+  letter-spacing:.1em;cursor:pointer;touch-action:manipulation;width:100%;
+}
+.arm-ctr:active{background:rgba(0,216,255,.22)}
+
+/* joystick */
+.joy-label{font-size:9px;color:var(--dm);letter-spacing:.15em;flex-shrink:0}
+.joy-ring{
+  position:relative;border-radius:50%;
+  width:clamp(110px,33vmin,175px);height:clamp(110px,33vmin,175px);
+  background:radial-gradient(circle,var(--bg2),var(--bg0));
+  border:1.5px solid var(--dm);flex-shrink:0;touch-action:none;
+  transition:border-color .3s,box-shadow .3s;
+}
+.joy-ring.armed{border-color:var(--gn);box-shadow:0 0 14px rgba(0,255,128,.22),inset 0 0 20px rgba(0,255,128,.05)}
+.joy-ring.active{border-color:var(--cy);box-shadow:0 0 18px rgba(0,216,255,.45),inset 0 0 20px rgba(0,216,255,.06)}
+.joy-knob{
+  position:absolute;top:50%;left:50%;width:35%;height:35%;border-radius:50%;
+  background:radial-gradient(circle,#4090cc,#1050a0);
+  transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(0,120,220,.5);
+  pointer-events:none;transition:background .3s,box-shadow .3s;
+}
+.joy-ring.armed .joy-knob{background:radial-gradient(circle,var(--gn),#008040);box-shadow:0 0 12px rgba(0,255,128,.6)}
+.joy-ring.active .joy-knob{box-shadow:0 0 18px rgba(0,216,255,.8)}
+.joy-mk{
+  position:absolute;font-size:9px;color:var(--dm);pointer-events:none;line-height:1;
+}
+.joy-info{font-size:9px;color:var(--dm);letter-spacing:.05em;flex-shrink:0}
+
+/* show-off panel */
+#showoff-panel{flex-direction:column;padding:12px;gap:10px;overflow-y:auto;touch-action:pan-y}
+.spd-row{display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:10px;color:var(--dm)}
+.spd-row input{flex:1}
+.spd-v{color:var(--cy);min-width:26px;text-align:right;font-size:11px}
+#mv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mv-btn{
+  padding:14px 6px;border:1px solid var(--dm);border-radius:5px;
+  background:transparent;color:var(--dm);font:9px/1 monospace;
+  letter-spacing:.08em;text-align:center;cursor:pointer;touch-action:manipulation;
+  transition:all .15s;
+}
+.mv-btn:active,.mv-btn.run{
+  background:var(--cy-d);border-color:var(--cy);
+  color:var(--cy);box-shadow:0 0 10px rgba(0,216,255,.3);
+}
+.mv-stop{
+  padding:10px;flex-shrink:0;border:1px solid var(--rd);border-radius:4px;
+  background:var(--rd-d);color:var(--rd);font:10px/1 monospace;
+  letter-spacing:.1em;cursor:pointer;touch-action:manipulation;
+}
+.mv-stop:active{background:rgba(255,32,64,.25)}
+
+/* toast */
+#toast{
+  position:fixed;bottom:55px;left:50%;transform:translateX(-50%);
+  background:var(--bg3);color:var(--txh);padding:5px 14px;
+  border-radius:16px;border:1px solid var(--dm);font-size:10px;
+  opacity:0;transition:opacity .3s;pointer-events:none;z-index:99;
+  letter-spacing:.05em;white-space:nowrap;
+}
 </style>
 </head>
 <body>
 
-<!-- Header -->
-<div id="hdr">
-  <span id="hdr-title">PicoBot</span>
-  <div id="dot" title="disconnected"></div>
-  <button class="btn" id="arm-btn" onclick="toggleArm()">DISARMED</button>
-  <button class="btn" id="stop-btn" onclick="sendStop()">■ STOP</button>
+<!-- Splash screen -->
+<div id="splash" onclick="dismissSplash()">
+  <div class="sp-logo">PICOBOT</div>
+  <div class="sp-sub">ADVANCED CONTROL v2</div>
+  <div class="sp-hint">▶ TAP TO ENTER ◀</div>
 </div>
 
-<!-- Tab bar -->
-<div id="tabs">
-  <div class="tab active" onclick="showTab('drive')">Drive</div>
-  <div class="tab" onclick="showTab('arm')">Arm</div>
-  <div class="tab" onclick="showTab('moves')">Moves</div>
-  <div class="tab" onclick="showTab('info')">Info</div>
-</div>
+<!-- App -->
+<div id="app">
 
-<!-- Content -->
-<div id="content">
-
-  <!-- Drive -->
-  <div class="panel active" id="drive-panel">
-    <div class="joy-wrap">
-      <div class="joy-label">Mecanum</div>
-      <div class="joy-ring" id="lring"><div class="joy-knob" id="lknob"></div></div>
-      <div id="drive-info" style="font-size:10px;color:#334155" id="linfo">f:0 s:0</div>
+  <!-- Topbar -->
+  <div id="topbar">
+    <span class="tb-title">PICOBOT</span>
+    <div id="conn-wrap">
+      <div id="dot" title="offline"></div>
+      <span id="conn-lbl">OFFLINE</span>
     </div>
-    <div class="joy-wrap">
-      <div class="joy-label">Drive</div>
-      <div class="joy-ring" id="rring"><div class="joy-knob" id="rknob"></div></div>
-      <div id="drive-info" style="font-size:10px;color:#334155" id="rinfo">f:0 r:0</div>
-    </div>
+    <button class="tb-btn" id="arm-btn" onclick="toggleArm()">DISARMED</button>
+    <button class="tb-btn" id="stop-btn" onclick="sendStop()">&#9632;&nbsp;STOP</button>
   </div>
 
-  <!-- Arm -->
-  <div class="panel" id="arm-panel">
-    <div class="servo-row">
-      <label>Base rotation <span id="base-val">90°</span></label>
-      <input type="range" id="base-slider" min="0" max="180" value="90" oninput="onServo('base',this)">
-    </div>
-    <div class="servo-row">
-      <label>Arm raise/lower <span id="arm-val">90°</span></label>
-      <input type="range" id="arm-slider" min="40" max="140" value="90" oninput="onServo('arm',this)">
-    </div>
-    <div class="servo-row">
-      <label>Gripper <span id="claw-val">—</span></label>
-      <input type="range" id="claw-slider" min="40" max="140" value="90" oninput="onServo('claw',this)">
-    </div>
-    <p style="font-size:11px;color:#475569;margin-top:8px">Gripper value sent only after first touch.</p>
-    <button class="btn" style="margin-top:12px;width:100%;padding:10px" onclick="centreArm()">Centre Arm (90°)</button>
+  <!-- Tab bar -->
+  <div id="tabbar">
+    <div class="tab active" id="tab-control" onclick="showTab('control')">CONTROL</div>
+    <div class="tab" id="tab-showoff" onclick="showTab('showoff')">SHOW&nbsp;OFF</div>
   </div>
 
-  <!-- Moves -->
-  <div class="panel" id="moves-panel">
-    <div id="move-speed-row">
-      <span>Speed</span>
-      <input type="range" id="move-speed" min="20" max="100" value="50" oninput="document.getElementById('move-speed-val').textContent=this.value">
-      <span id="move-speed-val">50</span>
-    </div>
-    <div id="moves-grid">
-      <div class="move-btn" onclick="runMove('spin')">Spin</div>
-      <div class="move-btn" onclick="runMove('moonwalk')">Moonwalk</div>
-      <div class="move-btn" onclick="runMove('crab_dash')">Crab Dash</div>
-      <div class="move-btn" onclick="runMove('wiggle')">Wiggle</div>
-      <div class="move-btn" onclick="runMove('orbit')">Orbit</div>
-      <div class="move-btn" onclick="runMove('rear_pivot')">Rear Pivot</div>
-      <div class="move-btn" onclick="runMove('planet')">Planet</div>
-      <div class="move-btn" onclick="runMove('twirl')">Twirl</div>
-      <div class="move-btn" onclick="runMove('figure8')">Figure 8</div>
-      <div class="move-btn" onclick="runMove('tank_drift')">Tank Drift</div>
-    </div>
-    <button class="btn" style="margin-top:12px;width:100%;padding:10px" onclick="sendStop()">Stop Move</button>
-  </div>
+  <!-- Content -->
+  <div id="content">
 
-  <!-- Info -->
-  <div class="panel" id="info-panel">
-    <div class="info-section">
-      <h3>Connection</h3>
-      <div class="kv"><span class="k">Status</span><span class="v" id="info-status">—</span></div>
-      <div class="kv"><span class="k">Armed</span><span class="v" id="info-armed">No</span></div>
-      <div class="kv"><span class="k">Uptime</span><span class="v" id="info-uptime">—</span></div>
+    <!-- CONTROL panel -->
+    <div class="panel active" id="control-panel">
+
+      <!-- Left zone -->
+      <div id="left-zone">
+        <div id="mode-sw">
+          <button class="mode-btn on" id="ms-strafe" onclick="setMode('strafe')">STRAFE</button>
+          <button class="mode-btn"    id="ms-armjoy" onclick="setMode('armjoy')">ARM&nbsp;JOY</button>
+        </div>
+
+        <!-- STRAFE: mecanum joystick -->
+        <div id="ctx-strafe">
+          <div class="joy-label">MECANUM</div>
+          <div class="joy-ring" id="lring">
+            <span class="joy-mk" style="top:3px;left:50%;transform:translateX(-50%)">&#9650;</span>
+            <span class="joy-mk" style="bottom:3px;left:50%;transform:translateX(-50%)">&#9660;</span>
+            <span class="joy-mk" style="left:3px;top:50%;transform:translateY(-50%)">&#9664;</span>
+            <span class="joy-mk" style="right:3px;top:50%;transform:translateY(-50%)">&#9654;</span>
+            <div class="joy-knob" id="lknob"></div>
+          </div>
+          <div id="linfo" class="joy-info">f:0 s:0</div>
+        </div>
+
+        <!-- ARM JOY: arm sliders -->
+        <div id="ctx-armjoy" style="display:none">
+          <div class="sv-row">
+            <div class="sv-hd">BASE ROTATION <em id="base-val">90&deg;</em></div>
+            <input type="range" id="base-slider" min="0" max="180" value="90" oninput="onServo('base',this)">
+          </div>
+          <div class="sv-row">
+            <div class="sv-hd">ARM RAISE <em id="arm-val">90&deg;</em></div>
+            <input type="range" id="arm-slider" min="40" max="140" value="90" oninput="onServo('arm',this)">
+          </div>
+          <div class="sv-row">
+            <div class="sv-hd">CLAW <em id="claw-val">&#8212;</em></div>
+            <input type="range" id="claw-slider" min="40" max="140" value="90" oninput="onServo('claw',this)">
+          </div>
+          <div class="sv-note">Claw sent on first touch only</div>
+          <button class="arm-ctr" onclick="centreArm()">&#8982; CENTRE ARM (90&deg;)</button>
+        </div>
+      </div>
+
+      <!-- Right zone: drive joystick -->
+      <div id="right-zone">
+        <div class="joy-label">DRIVE</div>
+        <div class="joy-ring" id="rring">
+          <span class="joy-mk" style="top:3px;left:50%;transform:translateX(-50%)">&#9650;</span>
+          <span class="joy-mk" style="bottom:3px;left:50%;transform:translateX(-50%)">&#9660;</span>
+          <span class="joy-mk" style="left:3px;top:50%;transform:translateY(-50%)">&#9664;</span>
+          <span class="joy-mk" style="right:3px;top:50%;transform:translateY(-50%)">&#9654;</span>
+          <div class="joy-knob" id="rknob"></div>
+        </div>
+        <div id="rinfo" class="joy-info">f:0 r:0</div>
+      </div>
+
+    </div><!-- #control-panel -->
+
+    <!-- SHOW OFF panel -->
+    <div class="panel" id="showoff-panel">
+      <div class="spd-row">
+        <span>SPEED</span>
+        <input type="range" id="mv-speed" min="20" max="100" value="50"
+               oninput="document.getElementById('mv-spd-v').textContent=this.value">
+        <span class="spd-v" id="mv-spd-v">50</span>
+      </div>
+      <div id="mv-grid">
+        <div class="mv-btn" onclick="runMove('spin')">SPIN</div>
+        <div class="mv-btn" onclick="runMove('moonwalk')">MOONWALK</div>
+        <div class="mv-btn" onclick="runMove('crab_dash')">CRAB DASH</div>
+        <div class="mv-btn" onclick="runMove('wiggle')">WIGGLE</div>
+        <div class="mv-btn" onclick="runMove('orbit')">ORBIT</div>
+        <div class="mv-btn" onclick="runMove('rear_pivot')">REAR PIVOT</div>
+        <div class="mv-btn" onclick="runMove('planet')">PLANET</div>
+        <div class="mv-btn" onclick="runMove('twirl')">TWIRL</div>
+        <div class="mv-btn" onclick="runMove('figure8')">FIGURE 8</div>
+        <div class="mv-btn" onclick="runMove('tank_drift')">TANK DRIFT</div>
+      </div>
+      <button class="mv-stop" onclick="sendStop()">&#9632; STOP MOVE</button>
     </div>
-    <div class="info-section">
-      <h3>Drive</h3>
-      <div class="kv"><span class="k">FL</span><span class="v" id="tfl">—</span></div>
-      <div class="kv"><span class="k">BL</span><span class="v" id="tbl">—</span></div>
-      <div class="kv"><span class="k">FR</span><span class="v" id="tfr">—</span></div>
-      <div class="kv"><span class="k">BR</span><span class="v" id="tbr">—</span></div>
-    </div>
-    <div class="info-section">
-      <h3>Arm</h3>
-      <div class="kv"><span class="k">Base</span><span class="v" id="tbase">—</span></div>
-      <div class="kv"><span class="k">Arm</span><span class="v" id="tarm">—</span></div>
-      <div class="kv"><span class="k">Claw</span><span class="v" id="tclaw">—</span></div>
-      <div class="kv"><span class="k">Dist (cm)</span><span class="v" id="tdist">—</span></div>
-    </div>
-  </div>
-</div>
+
+  </div><!-- #content -->
+</div><!-- #app -->
 
 <div id="toast"></div>
 
 <script>
 // ── config ────────────────────────────────────────────────────────────────────
 const WS_URL = 'ws://' + location.hostname + '/ws';
-const DRIVE_HZ   = 20;    // Hz while joystick active
-const HEARTBEAT_HZ = 5;   // Hz while stick touched but centered
+const DRIVE_HZ = 20;
+const HEARTBEAT_HZ = 5;
 
 // Servo safe limits — must match hardware_map.py
 const SERVO_LIMITS = {
-  base: { min: 0,  max: 180, home: 90 },
-  arm:  { min: 40, max: 140, home: 90 },
-  claw: { min: 40, max: 140, home: 90 },
+  base: { min:0,   max:180, home:90 },
+  arm:  { min:40,  max:140, home:90 },
+  claw: { min:40,  max:140, home:90 },
 };
-function clampServo(axis, val) {
+function clampServo(axis, v) {
   const l = SERVO_LIMITS[axis];
-  return Math.max(l.min, Math.min(l.max, val));
+  return Math.max(l.min, Math.min(l.max, v));
 }
 
 // ── state ─────────────────────────────────────────────────────────────────────
-let sock = null;
-let armed = false;
-let seq = 0;
-const armInit = { base: false, arm: false, claw: false };
-
-// joystick state
+let sock = null, armed = false, seq = 0;
+const armInit = { base:false, arm:false, claw:false };
+let ctrlMode = 'strafe';
 const joy = {
-  left:  { x: 0, y: 0, touched: false, owner: false },
-  right: { x: 0, y: 0, touched: false, owner: false },
+  left:  { x:0, y:0, touched:false },
+  right: { x:0, y:0, touched:false },
 };
-let driveOwner = null; // 'left' | 'right' | null
+let driveOwner = null;
 
-// ── sequence ──────────────────────────────────────────────────────────────────
 function nextSeq() { seq = (seq + 1) & 0xFFFF; return seq; }
+
+// ── splash ────────────────────────────────────────────────────────────────────
+let splashDone = false;
+function dismissSplash() {
+  if (splashDone) return;
+  splashDone = true;
+  const sp = document.getElementById('splash');
+  sp.classList.add('gone');
+  setTimeout(() => { sp.style.display = 'none'; }, 700);
+  document.getElementById('app').classList.add('up');
+}
+setTimeout(dismissSplash, 3500);
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
 function connect() {
-  setDot('connecting');
+  setDot('connecting'); setConnLbl('CONNECTING');
   sock = new WebSocket(WS_URL);
   sock.onopen = () => {
     send('HELLO,1,picobot-ui-v2');
-    setDot('connected');
-    setInfo('info-status', 'Connected');
+    setDot('connected'); setConnLbl('ONLINE');
     resetArm();
   };
   sock.onclose = () => {
-    setDot('disconnected');
-    setInfo('info-status', 'Disconnected');
+    setDot('error'); setConnLbl('OFFLINE');
     resetArm();
     setTimeout(connect, 2000);
   };
-  sock.onerror = () => {
-    setDot('error');
-    resetArm();
-  };
+  sock.onerror = () => { setDot('error'); setConnLbl('ERROR'); resetArm(); };
   sock.onmessage = e => handleMsg(e.data);
 }
 
-function send(text) {
-  if (sock && sock.readyState === 1) sock.send(text);
-}
+function send(text) { if (sock && sock.readyState === 1) sock.send(text); }
+function isConn() { return sock && sock.readyState === 1; }
 
-function isConnected() { return sock && sock.readyState === 1; }
-
-// ── messaging ─────────────────────────────────────────────────────────────────
+// ── message handler ───────────────────────────────────────────────────────────
 function handleMsg(text) {
   const p = text.split(',');
   const cmd = p[0];
-  if (cmd === 'S') {
-    // S,seq,mode,armed,f,s,r,base,arm,claw,dist_cm,uptime_ms
-    setInfo('info-armed', p[3] === '1' ? 'Yes' : 'No');
-    setInfo('tfl', p[4]); setInfo('tbl', p[5]);
-    setInfo('tfr', p[6]);
-    setInfo('tbase', p[7] + '°'); setInfo('tarm', p[8] + '°'); setInfo('tclaw', p[9] + '°');
-    setInfo('tdist', p[10]);
-    const ms = parseInt(p[11]);
-    setInfo('info-uptime', ms ? (ms/1000).toFixed(1) + 's' : '—');
-  } else if (cmd === 'ERR') {
-    toast('ERR: ' + p.slice(2).join(' '));
-  } else if (cmd === 'K') {
-    toast('K: ' + p.slice(1).join(' '));
-  }
+  if (cmd === 'ERR') toast('ERR: ' + p.slice(2).join(' '));
+  else if (cmd === 'K') toast('K: ' + p.slice(1).join(' '));
+  // S frame fields available for future telemetry display
 }
 
 // ── ARM / DISARM ──────────────────────────────────────────────────────────────
 function toggleArm() {
-  if (!isConnected()) { toast('Not connected'); return; }
-  if (armed) {
-    send(`ARM,${nextSeq()},0`);
-    setArmedUI(false);
-  } else {
-    send(`ARM,${nextSeq()},1`);
-    setArmedUI(true);
-  }
+  if (!isConn()) { toast('NOT CONNECTED'); return; }
+  if (armed) { send('ARM,' + nextSeq() + ',0'); setArmedUI(false); }
+  else        { send('ARM,' + nextSeq() + ',1'); setArmedUI(true);  }
 }
 
 function resetArm() {
-  stopHeartbeat();
-  stopDriveLoop();
-  driveOwner = null;
-  if (armed) {
-    send(`STOP,${nextSeq()}`);
-    send(`ARM,${nextSeq()},0`);
-  }
+  stopHeartbeat(); stopDriveLoop(); driveOwner = null;
+  if (armed) { send('STOP,' + nextSeq()); send('ARM,' + nextSeq() + ',0'); }
   setArmedUI(false);
 }
 
-function setArmedUI(val) {
-  armed = val;
-  const btn = document.getElementById('arm-btn');
-  btn.textContent = val ? 'ARMED' : 'DISARMED';
-  btn.classList.toggle('armed', val);
-  document.querySelectorAll('.joy-ring').forEach(r => r.classList.toggle('armed', val));
+function setArmedUI(v) {
+  armed = v;
+  const b = document.getElementById('arm-btn');
+  b.textContent = v ? 'ARMED' : 'DISARMED';
+  b.classList.toggle('armed', v);
+  document.querySelectorAll('.joy-ring').forEach(r => r.classList.toggle('armed', v));
 }
 
 function sendStop() {
-  stopHeartbeat();
-  stopDriveLoop();
-  driveOwner = null;
-  send(`STOP,${nextSeq()}`);
-  send(`ARM,${nextSeq()},0`);
+  stopHeartbeat(); stopDriveLoop(); driveOwner = null;
+  send('STOP,' + nextSeq());
+  send('ARM,' + nextSeq() + ',0');
   setArmedUI(false);
+  if (activeMovBtn) { activeMovBtn.classList.remove('run'); activeMovBtn = null; }
 }
 
 // ── page visibility ───────────────────────────────────────────────────────────
-document.addEventListener('visibilitychange', () => {
+document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
-    send(`STOP,${nextSeq()}`);
-    send(`ARM,${nextSeq()},0`);
+    send('STOP,' + nextSeq());
+    send('ARM,' + nextSeq() + ',0');
     setArmedUI(false);
   }
 });
 
 // ── drive loop ────────────────────────────────────────────────────────────────
-let driveInterval = null;
-let heartbeatInterval = null;
-
-function startDriveLoop() {
-  if (driveInterval) return;
-  driveInterval = setInterval(sendDrive, 1000 / DRIVE_HZ);
-}
-
-function stopDriveLoop() {
-  if (driveInterval) { clearInterval(driveInterval); driveInterval = null; }
-}
-
-function startHeartbeat() {
-  if (heartbeatInterval) return;
-  heartbeatInterval = setInterval(sendZeroDrive, 1000 / HEARTBEAT_HZ);
-}
-
-function stopHeartbeat() {
-  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
-}
+var driveIv = null, hbIv = null;
+function startDriveLoop() { if (!driveIv) driveIv = setInterval(sendDrive, 1000 / DRIVE_HZ); }
+function stopDriveLoop()  { if (driveIv)  { clearInterval(driveIv);  driveIv = null;  } }
+function startHeartbeat() { if (!hbIv)    hbIv    = setInterval(sendZero, 1000 / HEARTBEAT_HZ); }
+function stopHeartbeat()  { if (hbIv)     { clearInterval(hbIv);     hbIv    = null;  } }
 
 function sendDrive() {
-  if (!isConnected()) return;
-  let f = 0, s = 0, r = 0;
-  const o = driveOwner;
-  if (o === 'left') {
-    f = Math.round(joy.left.y * 100);
-    s = Math.round(joy.left.x * 100);
-  } else if (o === 'right') {
-    f = Math.round(joy.right.y * 100);
-    r = Math.round(joy.right.x * 60); // TURN_GAIN_RIGHT = 0.6
-  }
-  send(`D,${nextSeq()},${f},${s},${r}`);
+  if (!isConn()) return;
+  var f = 0, s = 0, r = 0;
+  if (driveOwner === 'left')  { f = Math.round(joy.left.y  * 100); s = Math.round(joy.left.x  * 100); }
+  if (driveOwner === 'right') { f = Math.round(joy.right.y * 100); r = Math.round(joy.right.x * 60);  }
+  send('D,' + nextSeq() + ',' + f + ',' + s + ',' + r);
 }
-
-function sendZeroDrive() {
-  if (isConnected()) send(`D,${nextSeq()},0,0,0`);
-}
+function sendZero() { if (isConn()) send('D,' + nextSeq() + ',0,0,0'); }
 
 // ── joystick ──────────────────────────────────────────────────────────────────
-function setupJoystick(ringId, knobId, side) {
-  const ring = document.getElementById(ringId);
-  const knob = document.getElementById(knobId);
-  const infoId = side === 'left' ? 'linfo' : 'rinfo';
-  let touchId = null;
+function setupJoy(ringId, knobId, side) {
+  var ring = document.getElementById(ringId);
+  var knob = document.getElementById(knobId);
+  var infoId = side === 'left' ? 'linfo' : 'rinfo';
+  var tid = null;
 
-  function radius() { return ring.clientWidth / 2; }
+  function rad() { return ring.clientWidth / 2; }
 
-  function moveTo(cx, cy) {
-    const rect = ring.getBoundingClientRect();
-    const dx = cx - (rect.left + rect.width / 2);
-    const dy = cy - (rect.top  + rect.height / 2);
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const r = radius();
-    const clamp = dist > r ? r / dist : 1;
-    const kx = dx * clamp;
-    const ky = dy * clamp;
-    knob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
+  function move(cx, cy) {
+    var rc = ring.getBoundingClientRect();
+    var dx = cx - (rc.left + rc.width / 2);
+    var dy = cy - (rc.top  + rc.height / 2);
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var r = rad();
+    var sc = dist > r ? r / dist : 1;
+    var kx = dx * sc, ky = dy * sc;
+    knob.style.transform = 'translate(calc(-50% + ' + kx + 'px),calc(-50% + ' + ky + 'px))';
     joy[side].x =  kx / r;
-    joy[side].y = -ky / r;  // Y inverted: up = positive
+    joy[side].y = -ky / r;
     updateInfo(infoId, side);
   }
 
   function release() {
-    touchId = null;
-    joy[side].x = 0;
-    joy[side].y = 0;
+    tid = null;
+    joy[side].x = joy[side].y = 0;
     joy[side].touched = false;
-    knob.style.transform = 'translate(-50%, -50%)';
+    knob.style.transform = 'translate(-50%,-50%)';
     ring.classList.remove('active');
     updateInfo(infoId, side);
-    onJoyRelease(side);
+    onRelease(side);
   }
 
-  ring.addEventListener('touchstart', e => {
+  ring.addEventListener('touchstart', function(e) {
     e.preventDefault();
-    if (touchId !== null) return;
-    const t = e.changedTouches[0];
-    touchId = t.identifier;
+    if (tid !== null) return;
+    if (side === 'left' && ctrlMode !== 'strafe') return;
+    var t = e.changedTouches[0];
+    tid = t.identifier;
     joy[side].touched = true;
     ring.classList.add('active');
-    moveTo(t.clientX, t.clientY);
-    onJoyTouch(side);
+    move(t.clientX, t.clientY);
+    onTouch(side);
   }, { passive: false });
 
-  ring.addEventListener('touchmove', e => {
+  ring.addEventListener('touchmove', function(e) {
     e.preventDefault();
-    for (const t of e.changedTouches) {
-      if (t.identifier === touchId) {
-        moveTo(t.clientX, t.clientY);
-        break;
-      }
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var t = e.changedTouches[i];
+      if (t.identifier === tid) { move(t.clientX, t.clientY); break; }
     }
   }, { passive: false });
 
-  ring.addEventListener('touchend', e => {
-    for (const t of e.changedTouches) {
-      if (t.identifier === touchId) { release(); break; }
+  ring.addEventListener('touchend', function(e) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === tid) { release(); break; }
     }
   }, { passive: false });
 
-  ring.addEventListener('touchcancel', e => {
-    for (const t of e.changedTouches) {
-      if (t.identifier === touchId) { release(); break; }
+  ring.addEventListener('touchcancel', function(e) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === tid) { release(); break; }
     }
   }, { passive: false });
 
-  // Mouse fallback (desktop testing)
-  let mouseDown = false;
-  ring.addEventListener('mousedown', e => {
-    mouseDown = true;
+  // Mouse fallback for desktop testing
+  var md = false;
+  ring.addEventListener('mousedown', function(e) {
+    if (side === 'left' && ctrlMode !== 'strafe') return;
+    md = true;
     joy[side].touched = true;
     ring.classList.add('active');
-    moveTo(e.clientX, e.clientY);
-    onJoyTouch(side);
+    move(e.clientX, e.clientY);
+    onTouch(side);
   });
-  window.addEventListener('mousemove', e => {
-    if (!mouseDown) return;
-    moveTo(e.clientX, e.clientY);
-  });
-  window.addEventListener('mouseup', () => {
-    if (!mouseDown) return;
-    mouseDown = false;
-    release();
-  });
+  window.addEventListener('mousemove', function(e) { if (md) move(e.clientX, e.clientY); });
+  window.addEventListener('mouseup', function() { if (md) { md = false; release(); } });
 }
 
 function updateInfo(id, side) {
-  const el = document.getElementById(id);
+  var el = document.getElementById(id);
   if (!el) return;
-  const j = joy[side];
-  if (side === 'left') {
-    el.textContent = `f:${Math.round(j.y*100)} s:${Math.round(j.x*100)}`;
-  } else {
-    el.textContent = `f:${Math.round(j.y*100)} r:${Math.round(j.x*60)}`;
-  }
+  var j = joy[side];
+  el.textContent = side === 'left'
+    ? 'f:' + Math.round(j.y * 100) + ' s:' + Math.round(j.x * 100)
+    : 'f:' + Math.round(j.y * 100) + ' r:' + Math.round(j.x * 60);
 }
 
-function onJoyTouch(side) {
+function onTouch(side) {
   if (driveOwner === null) {
     driveOwner = side;
     stopHeartbeat();
@@ -452,96 +543,105 @@ function onJoyTouch(side) {
   }
 }
 
-function onJoyRelease(side) {
+function onRelease(side) {
   if (driveOwner !== side) return;
   stopDriveLoop();
   driveOwner = null;
-  // Send zero drive frame to stop motors immediately — do NOT send STOP
-  // (STOP also disarms, requiring re-ARM before next joystick use).
-  send(`D,${nextSeq()},0,0,0`);
-
-  // If other joystick is still touched, it takes over
-  const other = side === 'left' ? 'right' : 'left';
+  send('D,' + nextSeq() + ',0,0,0');
+  var other = side === 'left' ? 'right' : 'left';
   if (joy[other].touched) {
     driveOwner = other;
     startDriveLoop();
   } else {
-    // Keep heartbeat running indefinitely while armed so deadman stays alive.
-    // Heartbeat is stopped only by sendStop() or resetArm() (disconnect/disarm).
     startHeartbeat();
   }
 }
 
 // ── arm sliders ───────────────────────────────────────────────────────────────
 function onServo(axis, el) {
-  const val = parseInt(el.value);
+  var v = parseInt(el.value);
   armInit[axis] = true;
-  document.getElementById(axis + '-val').textContent = val + '°';
+  document.getElementById(axis + '-val').textContent = v + '°';
   sendArm();
 }
 
 function sendArm() {
-  const base = armInit.base  ? clampServo('base', parseInt(document.getElementById('base-slider').value)) : -1;
-  const arm  = armInit.arm   ? clampServo('arm',  parseInt(document.getElementById('arm-slider').value))  : -1;
-  const claw = armInit.claw  ? clampServo('claw', parseInt(document.getElementById('claw-slider').value)) : -1;
-  if (base === -1 && arm === -1 && claw === -1) return;
-  send(`A,${nextSeq()},${base},${arm},${claw}`);
+  var b = armInit.base ? clampServo('base', parseInt(document.getElementById('base-slider').value)) : -1;
+  var a = armInit.arm  ? clampServo('arm',  parseInt(document.getElementById('arm-slider').value))  : -1;
+  var c = armInit.claw ? clampServo('claw', parseInt(document.getElementById('claw-slider').value)) : -1;
+  if (b === -1 && a === -1 && c === -1) return;
+  send('A,' + nextSeq() + ',' + b + ',' + a + ',' + c);
 }
 
 function centreArm() {
-  ['base', 'arm', 'claw'].forEach(axis => {
-    const home = SERVO_LIMITS[axis].home;
-    document.getElementById(axis + '-slider').value = home;
-    document.getElementById(axis + '-val').textContent = home + '°';
-    armInit[axis] = true;
+  ['base', 'arm', 'claw'].forEach(function(ax) {
+    var h = SERVO_LIMITS[ax].home;
+    document.getElementById(ax + '-slider').value = h;
+    document.getElementById(ax + '-val').textContent = h + '°';
+    armInit[ax] = true;
   });
-  send(`A,${nextSeq()},${SERVO_LIMITS.base.home},${SERVO_LIMITS.arm.home},${SERVO_LIMITS.claw.home}`);
+  send('A,' + nextSeq() + ',' + SERVO_LIMITS.base.home + ',' + SERVO_LIMITS.arm.home + ',' + SERVO_LIMITS.claw.home);
 }
 
 // ── show-off moves ────────────────────────────────────────────────────────────
-let activeMovBtn = null;
-
+var activeMovBtn = null;
 function runMove(id) {
-  if (!isConnected()) { toast('Not connected'); return; }
-  const speed = parseInt(document.getElementById('move-speed').value);
-  send(`M,${nextSeq()},${id},${speed}`);
-  if (activeMovBtn) activeMovBtn.classList.remove('running');
+  if (!isConn()) { toast('NOT CONNECTED'); return; }
+  var sp = parseInt(document.getElementById('mv-speed').value);
+  send('M,' + nextSeq() + ',' + id + ',' + sp);
+  if (activeMovBtn) activeMovBtn.classList.remove('run');
   activeMovBtn = event.currentTarget;
-  activeMovBtn.classList.add('running');
+  activeMovBtn.classList.add('run');
+}
+
+// ── mode switch ───────────────────────────────────────────────────────────────
+function setMode(m) {
+  ctrlMode = m;
+  document.getElementById('ms-strafe').classList.toggle('on', m === 'strafe');
+  document.getElementById('ms-armjoy').classList.toggle('on', m === 'armjoy');
+  document.getElementById('ctx-strafe').style.display = m === 'strafe' ? 'flex' : 'none';
+  document.getElementById('ctx-armjoy').style.display = m === 'armjoy' ? 'flex' : 'none';
+  // Release left joystick if switching away from strafe while it owns drive
+  if (m !== 'strafe' && driveOwner === 'left') {
+    joy.left.touched = false;
+    joy.left.x = joy.left.y = 0;
+    document.getElementById('lknob').style.transform = 'translate(-50%,-50%)';
+    document.getElementById('lring').classList.remove('active');
+    onRelease('left');
+  }
 }
 
 // ── tabs ──────────────────────────────────────────────────────────────────────
 function showTab(name) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
   document.getElementById(name + '-panel').classList.add('active');
-  event.currentTarget.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
 }
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
 function setDot(state) {
-  const d = document.getElementById('dot');
+  var d = document.getElementById('dot');
   d.className = state;
   d.title = state;
 }
-
-function setInfo(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
+function setConnLbl(txt) {
+  var el = document.getElementById('conn-lbl');
+  if (el) el.textContent = txt;
 }
 
-let toastTimer = null;
+var ttTimer = null;
 function toast(msg) {
-  const el = document.getElementById('toast');
+  var el = document.getElementById('toast');
   el.textContent = msg;
   el.style.opacity = '1';
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.style.opacity = '0'; }, 2500);
+  if (ttTimer) clearTimeout(ttTimer);
+  ttTimer = setTimeout(function() { el.style.opacity = '0'; }, 2500);
 }
 
 // ── init ──────────────────────────────────────────────────────────────────────
-setupJoystick('lring', 'lknob', 'left');
-setupJoystick('rring', 'rknob', 'right');
+setupJoy('lring', 'lknob', 'left');
+setupJoy('rring', 'rknob', 'right');
 connect();
 </script>
 </body>

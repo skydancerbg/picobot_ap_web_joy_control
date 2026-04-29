@@ -230,6 +230,56 @@ All of the following must be true before moving to Milestone 2:
 
 ---
 
+## UI-RESTORE-01 — Advanced UI Regression Restoration (PENDING hardware verification)
+
+```
+Date: 2026-04-30
+Milestone: UI regression fix (not a new hardware milestone)
+Firmware commit: b99aacf
+Web page commit: (see git log after this entry)
+Pico target: Pico W / Pico 2 W
+Battery voltage: N/A (UI-only change)
+Phone / browser: pending
+Tested feature: Advanced cyber/neon UI restored with working WebSocket controls
+Expected result: Page visually matches advanced mockup; all WebSocket control logic preserved
+Actual result: (pending browser + robot test)
+Pass / fail: pending
+Browser console excerpt (with timestamp): pending
+Pico serial excerpt (with timestamp): pending
+Notes: Documents/picobot_web_page-v1.html was absent (gitignored). Advanced UI
+  reconstructed from task description: splash screen, cyber/neon palette, 2-tab layout
+  (CONTROL / SHOW OFF), STRAFE / ARM JOY mode switch, sector joystick marks, neon glows.
+  All working WebSocket logic preserved from prior index.html.
+Next action: Open pico/PicoBot/www/index.html in browser and verify layout matches
+  advanced mockup. Then upload to Pico and verify robot control.
+```
+
+### Browser Verification Checklist (PENDING)
+
+| # | Check | Expected | Actual | Pass? |
+|---|-------|----------|--------|-------|
+| 1 | Page visually matches advanced mockup | Cyber/neon design, not plain debug page | | |
+| 2 | Splash screen appears on load | PICOBOT neon logo + TAP TO ENTER | | |
+| 3 | Splash dismisses on tap or after 3.5s | App becomes visible | | |
+| 4 | Topbar shows PICOBOT + dot + DISARMED + STOP | All elements present | | |
+| 5 | CONTROL / SHOW OFF tabs present | Two tabs, CONTROL active by default | | |
+| 6 | STRAFE / ARM JOY mode switch present | Toggle buttons in left zone | | |
+| 7 | Left joystick visible in STRAFE mode | Mecanum joystick with sector marks | | |
+| 8 | Arm sliders visible in ARM JOY mode | BASE / ARM RAISE / CLAW sliders | | |
+| 9 | Right drive joystick present | DRIVE joystick with sector marks | | |
+| 10 | SHOW OFF tab: 10 move buttons + speed | Grid of move buttons visible | | |
+| 11 | WebSocket connects to ws://192.168.4.1/ws | Dot turns green, label ONLINE | | |
+| 12 | Right joystick sends D frames at 20 Hz | Confirmed in browser console | | |
+| 13 | Left joystick sends D frames (strafe) | Confirmed in browser console | | |
+| 14 | ARM JOY sliders clamp: base 0–180 | Slider min=0, max=180 | | |
+| 15 | ARM JOY sliders clamp: arm 40–140 | Slider min=40, max=140 | | |
+| 16 | ARM JOY sliders clamp: claw 40–140 | Slider min=40, max=140 | | |
+| 17 | CENTRE ARM sends A,seq,90,90,90 | All sliders snap to 90 | | |
+| 18 | Page hidden sends STOP then ARM,0 | Confirmed via visibility API | | |
+| 19 | No old HTTP GET movement endpoints active | grep fetch returns no movement URLs | | |
+
+---
+
 ## Milestones 8–10 — Servo Travel-Limit Verification (PENDING)
 
 **Status:** Servo travel-limit implementation complete; physical verification pending.
