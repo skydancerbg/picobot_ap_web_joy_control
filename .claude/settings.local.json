@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//tmp/**)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/robosteamdev/picobot-web-control/main/PicoBot/picobot.py\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/robosteamdev/picobot-web-control/main/PicoBot/picobot_main.py\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/robosteamdev/picobot-web-control/main/PicoBot/picobot_arm.py\")",
+      "Bash(curl *)",
+      "Bash(pip3 install *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Read(//dev/**)",
+      "Bash(lsusb)",
+      "Bash(fuser /dev/ttyACM0)",
+      "Bash(sudo usermod *)",
+      "Bash(sudo chmod *)"
+    ]
+  }
+}

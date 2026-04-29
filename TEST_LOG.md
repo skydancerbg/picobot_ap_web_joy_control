@@ -1,0 +1,229 @@
+# TEST_LOG.md
+
+One entry per test session. Both firmware and UI sides must be recorded when relevant.
+
+---
+
+## Template
+
+```
+Date:
+Milestone:
+Firmware commit / file hash:
+Web page commit / file hash:
+Pico target: Pico W / Pico 2 W
+Battery voltage:
+Phone / browser:
+Tested feature:
+Expected result:
+Actual result:
+Pass / fail:
+Browser console excerpt (with timestamp):
+Pico serial excerpt (with timestamp):
+Notes:
+Next action:
+```
+
+---
+
+## Milestone 1 — Architecture Regression Confirmation
+
+**Purpose:** The pin and channel mapping is already known from the tested working repo.  
+Milestone 1 does not discover pin numbers. It confirms that the new firmware architecture  
+(PCA9685-based drive.py, async app.py, WebSocket protocol) produces the same physical  
+robot behavior as `picobot_motors.py` and `picobot_arm.py` on the real robot.
+
+All steps run with **wheels lifted** unless noted. Use USB power for steps M1-1 through M1-3;  
+battery is required for M1-4 onward.
+
+Use `mpremote connect /dev/ttyACM0 repl` or upload via `tools/upload_to_pico.md`.
+
+---
+
+### M1-1 — Confirm both I2C buses are live
+
+**What we already know:** motor PCA9685 at I2C0/GP20/GP21, arm PCA9685 at I2C1/GP2/GP3.  
+**What this confirms:** the new firmware can reach both boards after refactoring.
+
+```python
+from machine import I2C, Pin
+
+i2c0 = I2C(0, sda=Pin(20), scl=Pin(21), freq=100_000)
+i2c1 = I2C(1, sda=Pin(2),  scl=Pin(3),  freq=400_000)
+
+print("Motor PCA9685 (I2C0):", i2c0.scan())   # expected: [64]
+print("Arm PCA9685   (I2C1):", i2c1.scan())   # expected: [64]
+```
+
+| Check | Expected | Actual | Pass? |
+|-------|----------|--------|-------|
+| I2C0 returns [64] | [64] | | |
+| I2C1 returns [64] | [64] | | |
+
+---
+
+### M1-2 — Confirm motor channel mapping matches working repo
+
+**What we already know:** LeftFront=(0,1,2), LeftBack=(3,4,5), RightFront=(6,7,8), RightBack=(9,10,11).  
+**What this confirms:** each physical wheel spins in the direction the working repo predicts.
+
+Run the new firmware's `drive.init()` and command forward at 30% on one wheel at a time.  
+Compare against `picobot_motors.py` `TurnMotor('LeftFront','forward',30)` behavior.
+
+```python
+from PicoBot import hardware_map as hw
+from PicoBot import drive
+
+drive.init()
+
+# Forward at 30% on front-left only
+from machine import I2C, Pin
+i2c = I2C(hw.MOTOR_I2C_BUS, sda=Pin(hw.MOTOR_I2C_SDA), scl=Pin(hw.MOTOR_I2C_SCL), freq=hw.MOTOR_I2C_FREQ)
+
+def pca_ch(i2c, ch, on, off, addr=0x40):
+    base = 0x06 + 4*ch
+    i2c.writeto_mem(addr, base, bytes([on&0xFF, on>>8, off&0xFF, off>>8]))
+
+# Front-Left forward: PWM ch0=30%, IN1 ch1=LOW, IN2 ch2=HIGH
+pca_ch(i2c, 0, 0, 1229)   # 30% of 4095
+pca_ch(i2c, 1, 0, 0)       # IN1 LOW
+pca_ch(i2c, 2, 0, 4095)    # IN2 HIGH
+
+import time; time.sleep(1)
+
+# Stop
+pca_ch(i2c, 0, 0, 0); pca_ch(i2c, 1, 0, 0); pca_ch(i2c, 2, 0, 0)
+```
+
+Repeat for BL (3,4,5), FR (6,7,8), BR (9,10,11).
+
+| Motor | Working repo direction | New firmware direction | Match? |
+|-------|----------------------|----------------------|--------|
+| FL (ch 0,1,2) | Forward = wheel spins forward | | |
+| BL (ch 3,4,5) | Forward = wheel spins forward | | |
+| FR (ch 6,7,8) | Forward = wheel spins forward | | |
+| BR (ch 9,10,11) | Forward = wheel spins forward | | |
+
+---
+
+### M1-3 — Confirm arm I2C and servo channel mapping matches working repo
+
+**What we already know:** arm at I2C1/GP2/GP3, ch0=base, ch1=arm, ch2=claw, 500–2500 µs.  
+**What this confirms:** each servo moves to the same physical position as `picobot_arm.py`.
+
+```python
+from PicoBot import arm
+
+arm.init()                        # should print: arm: PCA9685 OK (I2C bus 1 ...)
+arm.set_targets(90, 90, 90)      # all servos to 90°
+
+import time
+time.sleep(1)
+
+arm.set_targets(45, -1, -1)      # base only to 45°
+time.sleep(1)
+arm.set_targets(90, -1, -1)      # back to 90°
+```
+
+| Check | Expected | Actual | Pass? |
+|-------|----------|--------|-------|
+| `arm.init()` prints OK | ✓ | | |
+| ch0 (base) moves to 45° | base servo moves | | |
+| ch1 (arm) stays at 90° | arm servo still | | |
+| ch2 (claw) stays at 90° | claw servo still | | |
+
+---
+
+### M1-4 — Confirm mecanum strafe direction (wheels lifted, battery)
+
+**What we already know:** working repo `starf_right()` = FL fwd, BL back, FR back, BR fwd → STRAFE_SIGN=+1.  
+**What this confirms:** `drive.apply(f=0, s=50, r=0)` produces the same wheel pattern as the working repo.
+
+```python
+from PicoBot import drive, safety, hardware_map as hw
+
+drive.init()
+safety.init(hw.MOTOR_ENABLE_PIN)
+
+safety.do_arm()
+drive.apply(0, 50, 0, armed=True)   # strafe right command
+
+import time; time.sleep(1)
+drive.zero_all()
+safety.hard_disable()
+```
+
+| Wheel | Expected (matches working repo) | Actual | Pass? |
+|-------|--------------------------------|--------|-------|
+| FL | Forward | | |
+| BL | Backward | | |
+| FR | Backward | | |
+| BR | Forward | | |
+
+If all four match: STRAFE_SIGN=+1 confirmed for new firmware.  
+If FL/BR and BL/FR are swapped: set `STRAFE_SIGN = -1` in `hardware_map.py`.
+
+---
+
+### M1-5 — Calibrate servo safe ranges (new requirement for advanced UI)
+
+**Why this is new:** `picobot_arm.py` used uncalibrated 0°–180°. The new advanced UI sends  
+precise slider targets; buzzing or binding will damage servos.
+
+Per dev plan §15.1: from 90°, step ±5° until buzzing/binding, then back 5–10°.
+
+| Servo | Buzzes at low (°) | SAFE_MIN | Buzzes at high (°) | SAFE_MAX |
+|-------|:-----------------:|:--------:|:------------------:|:--------:|
+| Base  | | | | |
+| Arm   | | | | |
+| Claw  | | | | |
+
+Update `SERVO_*_MIN / SERVO_*_MAX` in `hardware_map.py` when done.
+
+---
+
+### M1-6 — Inspect motor driver for MOTOR_ENABLE_PIN
+
+Inspect the motor driver PCB silkscreen and datasheet:
+
+- If a STBY / nSLEEP / EN pad is routed to a Pico GPIO: set `MOTOR_ENABLE_PIN = <pin>` in `hardware_map.py`.
+- If the enable input is tied permanently HIGH on the PCB: leave `MOTOR_ENABLE_PIN = None` and document it here.
+
+| Field | Value |
+|-------|-------|
+| Motor driver chip | TODO |
+| Enable pin present? | TODO |
+| MOTOR_ENABLE_PIN | TODO |
+
+---
+
+## Milestone 1 Pass Criteria
+
+All of the following must be true before moving to Milestone 2:
+
+- [ ] M1-1: Both I2C buses respond at address 0x40.
+- [ ] M1-2: All four wheels spin in the direction the working repo predicts.
+- [ ] M1-3: Each servo channel moves the correct physical servo.
+- [ ] M1-4: Strafe command produces same wheel pattern as working repo; `STRAFE_SIGN` confirmed.
+- [ ] M1-5: Servo safe ranges calibrated; `hardware_map.py` updated.
+- [ ] M1-6: `MOTOR_ENABLE_PIN` resolved (GPIO number or confirmed None).
+
+---
+
+## Before-Floor Safety Checklist (complete before any Milestone 5+ floor test)
+
+- [ ] Milestone 1 fully passed (all six steps above).
+- [ ] `MOTOR_ENABLE_PIN` set or confirmed None; safety implication documented.
+- [ ] `main.py` forces `MOTOR_ENABLE_PIN` low at boot — confirmed.
+- [ ] `machine.Timer` deadman fires and clears `armed` — confirmed.
+- [ ] `machine.WDT` enabled, fed only by top-level supervisor — confirmed.
+- [ ] UI sends `STOP` then `ARM,0` on page hidden — confirmed in browser dev tools.
+- [ ] `ARM,seq,0/1` works; robot boots disarmed; reconnect resets to disarmed.
+- [ ] WebSocket disconnect triggers stop + disarm — confirmed.
+- [ ] Parse failure triggers safety path — confirmed.
+- [ ] Show-off moves write only `(f, s, r)` targets — confirmed in code review.
+- [ ] Wheels lifted, low-speed full-forward test passed.
+
+---
+
+<!-- Add test entries below this line -->

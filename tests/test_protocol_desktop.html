@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PicoBot Protocol Tester</title>
+<style>
+body{font-family:monospace;background:#1e1e1e;color:#d4d4d4;padding:16px;max-width:700px}
+h2{color:#9cdcfe;margin-bottom:12px}
+#log{background:#111;border:1px solid #333;padding:10px;height:300px;overflow-y:auto;font-size:12px;margin-bottom:10px;border-radius:4px}
+.rx{color:#4ec9b0} .tx{color:#dcdcaa} .sys{color:#808080}
+input[type=text]{width:70%;background:#2d2d2d;border:1px solid #555;color:#d4d4d4;padding:6px;font:inherit;border-radius:4px}
+button{background:#264f78;border:1px solid #4fc3f7;color:#d4d4d4;padding:6px 12px;font:inherit;border-radius:4px;cursor:pointer;margin:2px}
+button:hover{background:#37699c}
+#status{font-size:12px;color:#808080;margin-bottom:8px}
+.preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<h2>PicoBot Protocol Tester</h2>
+<div id="status">Disconnected</div>
+<div>
+  <input type="text" id="url" value="ws://192.168.4.1/ws">
+  <button onclick="toggle()">Connect</button>
+</div>
+<br>
+<div class="preset-grid">
+  <button onclick="tx('HELLO,1,picobot-ui-v2')">HELLO</button>
+  <button onclick="tx('PING,'+ns()+','+Date.now())">PING</button>
+  <button onclick="tx('ARM,'+ns()+',1')">ARM 1</button>
+  <button onclick="tx('ARM,'+ns()+',0')">ARM 0</button>
+  <button onclick="tx('D,'+ns()+',50,0,0')">Fwd 50</button>
+  <button onclick="tx('D,'+ns()+',0,50,0')">Strafe R</button>
+  <button onclick="tx('D,'+ns()+',0,0,50')">Spin R</button>
+  <button onclick="tx('STOP,'+ns())">STOP</button>
+  <button onclick="tx('A,'+ns()+',90,90,90')">Arm 90°</button>
+  <button onclick="tx('M,'+ns()+',spin,50')">spin</button>
+  <button onclick="tx('CFG,'+ns()+',debug,1')">Debug ON</button>
+  <button onclick="tx('CFG,'+ns()+',debug,0')">Debug OFF</button>
+</div>
+<div>
+  <input type="text" id="manual" placeholder="custom frame">
+  <button onclick="tx(document.getElementById('manual').value)">Send</button>
+</div>
+<br>
+<div id="log"></div>
+<button onclick="document.getElementById('log').innerHTML=''">Clear</button>
+
+<script>
+let ws = null;
+let seq = 0;
+function ns(){ seq=(seq+1)&0xFFFF; return seq; }
+
+function log(cls, text){
+  const d = document.getElementById('log');
+  const ts = new Date().toISOString().substring(11,23);
+  d.innerHTML += `<div class="${cls}">[${ts}] ${text}</div>`;
+  d.scrollTop = d.scrollHeight;
+}
+
+function toggle(){
+  if(ws && ws.readyState < 2){ ws.close(); return; }
+  const url = document.getElementById('url').value;
+  ws = new WebSocket(url);
+  log('sys', 'connecting to '+url);
+  ws.onopen = ()=>{ document.getElementById('status').textContent='Connected'; log('sys','connected'); };
+  ws.onclose = ()=>{ document.getElementById('status').textContent='Disconnected'; log('sys','closed'); };
+  ws.onerror = ()=>{ log('sys','error'); };
+  ws.onmessage = e=>log('rx', '← '+e.data);
+}
+
+function tx(text){
+  if(!ws||ws.readyState!==1){ log('sys','not connected'); return; }
+  ws.send(text);
+  log('tx','→ '+text);
+}
+
+document.getElementById('manual').addEventListener('keydown', e=>{
+  if(e.key==='Enter') tx(e.target.value);
+});
+</script>
+</body>
+</html>
