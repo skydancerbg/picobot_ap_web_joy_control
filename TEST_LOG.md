@@ -230,47 +230,71 @@ All of the following must be true before moving to Milestone 2:
 
 ---
 
-## UI-BASELINE-RESTORE-03 — Exact mockup copied + WebSocket controls ported (PENDING browser/hardware verification)
+## HARDWARE-04 — Motion, strafe, and arm controls verified on hardware
+
+```
+Date: 2026-04-30
+Milestone: 5 (right joystick / drive), 6 (left mecanum / strafe), 8-10 (arm servos)
+Firmware commit: 67318d8
+Web page commit: (current HEAD after this entry)
+Pico target: Pico W / Pico 2 W
+Battery voltage: N/A (wheels lifted)
+Phone / browser: phone browser over 192.168.4.1
+Tested feature: Motion (right joystick), strafe (left joystick with sector lock),
+  arm base/tilt (ARM JOY canvas), gripper (slider).
+Expected result: All four controls produce robot movement / servo rotation.
+Actual result: PASS — all controls working on hardware.
+  Motion joystick: wheels spin in correct direction.
+  Strafe joystick: sector-locked mecanum strafe confirmed.
+  Arm JOY (base/tilt): servos respond.
+  Gripper slider: claw servo responds.
+Pass / fail: PASS
+Pico serial excerpt (with timestamp): N/A (not captured)
+Notes:
+  Root causes fixed in this session:
+  1. Touch event fix: makeJoystick() touchstart/touchmove changed to passive:false
+     + e.preventDefault(); touchmove moved from document to canvas element;
+     per-joystick touchId tracking prevents wrong touch being tracked when
+     palm/second finger contacts screen simultaneously.
+  2. Deadman heartbeat: startHeartbeat() added to sock.onopen so D frames feed
+     the firmware deadman timer from the moment of connection, not just after
+     first joystick touch.
+  3. Arm clamping: ajArm clamped to SERVO_LIMITS.arm (40-140), bar fill
+     proportional; gripper slider maps 0-1 to claw limits (40-140).
+  4. centreAllServos: resets ajBase/ajArm to 90 to prevent stale sends.
+Next action: Fine-tune control feel (expo curves, deadzone, turn gain).
+  Test show-off moves. Floor test (low-speed forward run).
+```
+
+---
+
+## UI-BASELINE-RESTORE-03 — Exact mockup + WebSocket controls; browser-verified; arm clamping fixed
 
 ```
 Date: 2026-04-30
 Milestone: UI Baseline Recovery Gate (pre-development gate, not a hardware milestone)
 Firmware commit: a39d154
-Web page commit: (see git log after this entry)
+Web page commit: 2dccc1c (base) + arm-clamp fix (current HEAD after this entry)
 Pico target: Pico W / Pico 2 W
 Battery voltage: N/A (UI-only change)
-Phone / browser: pending
-Tested feature: Documents/picobot_web_page-v1.html copied exactly to index.html;
-  WebSocket/control logic ported from working_control_wrong_ui.html.
-Expected result: Page visually matches exact reference mockup (canvas joysticks,
-  sector-lock strafe, ARM JOY canvas+gripper, show-off cards with animations,
-  fullscreen/landscape, PWA manifest); all WebSocket protocol correct.
-Actual result: Static checks passed. Browser/hardware verification pending.
-Pass / fail: PENDING (static only)
-Browser console excerpt (with timestamp): pending
+Phone / browser: Chrome headless 1200x700 (desktop simulation)
+Tested feature: Splash screen, CONTROL/STRAFE view, ARM JOY panel, SHOW OFF tab.
+  ARM joystick clamp bug fixed: ajArm now clamped to SERVO_LIMITS.arm (40-140),
+  bar fill uses proportional range; gripper slider maps full range to 40-140.
+Expected result: All four views render; arm limits enforced in UI tracking.
+Actual result: All four views render correctly (verified via headless Chrome screenshot).
+  STRAFE joystick: 8 sectors (FWD, BACK, DIAG FL/FR/BL/BR, SPIN L/R) visible.
+  ARM JOY: gripper slider, arm joystick quadrants, BASE/ARM readouts at 90°.
+  SHOW OFF: 10 cards (PIROUETTE…TANK DRIFT) in 5×2 grid.
+Pass / fail: PASS (desktop visual) — hardware/phone verification still pending
+Browser console excerpt (with timestamp): N/A (headless, no console capture)
 Pico serial excerpt (with timestamp): pending
 Notes:
-  - Exact copy via `cp Documents/picobot_web_page-v1.html pico/PicoBot/www/index.html`
-  - Google Fonts CDN removed (offline on Pico AP; fallback to monospace)
-  - ARM button added to topbar (DISARMED/ARMED)
-  - Connection dialog replaced with WebSocket status panel
-  - sendCmd() / sendServo() removed; no HTTP fetch calls remain
-  - WebSocket: connect(), send(), isConnected(), handleMsg()
-  - ARM/DISARM: toggleArm(), resetArm(), setArmedUI(), sendStop()
-  - visibilitychange: STOP then ARM,0
-  - Drive loop: 20 Hz D frames, 5 Hz heartbeat, onJoyTouch/onJoyRelease arbitration
-  - makeJoystick(): stream()/stopStream() replaced with joyMove()/joyRelease()
-  - Strafe canvas joystick: D,seq,f,s,r (left); expo-normalized
-  - Drive canvas joystick: D,seq,f,0,r (right); expo-curve preserved
-  - Arm joystick: A,seq,base,arm,-1 or -1,arm,-1 with armInit sentinel
-  - Gripper slider: A,seq,-1,-1,claw with armInit sentinel
-  - centreAllServos: A,seq,90,90,90
-  - selMove: M,seq,move_id,50 (single frame, no HTTP streaming)
-  - stopMove: STOP,seq
-  - Servo limits: base 0-180, arm 40-140, claw 40-140
-Next action: Open pico/PicoBot/www/index.html in browser and verify:
-  splash screen, canvas joysticks, ARM JOY panel, show-off cards render.
-  Then compile .mpy, upload to Pico, and test with wheels lifted.
+  - arm clamping bug fixed: ajArm = max(40,min(140,ajArm)); bar fill = (ajArm-40)/100%
+  - gripper slider: v = 40 + pct*(140-40) instead of pct*180
+  - centreAllServos: now also sets ajBase=90, ajArm=90 to prevent stale sends
+Next action: Upload to Pico, connect phone browser to ws://192.168.4.1/ws,
+  verify HELLO handshake and joystick drive frames at 20 Hz.
 ```
 
 ---

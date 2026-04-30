@@ -718,6 +718,7 @@ function connect() {
     setWsDialogStatus('CONNECTED');
     document.getElementById('disc-overlay').classList.add('hidden');
     resetArm();
+    startHeartbeat();  /* keep deadman alive from the moment of connection */
   };
   sock.onclose = function() {
     setPill(false, 'OFFLINE');
@@ -791,6 +792,7 @@ function sendStop() {
 
 document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
+    stopHeartbeat(); stopDriveLoop(); driveOwner = null;
     send('STOP,' + nextSeq());
     send('ARM,' + nextSeq() + ',0');
     setArmedUI(false);
@@ -849,7 +851,7 @@ function switchScreen(s) {
   const sep = mg ? mg.previousElementSibling : null;
   if (mg) mg.style.display = s === 'ctrl' ? 'flex' : 'none';
   if (sep && sep.classList.contains('tb-sep')) sep.style.display = s === 'ctrl' ? 'block' : 'none';
-  if (s === 'ctrl') { stopMove(); resizeCanvases(); }
+  if (s === 'ctrl') { stopMove(); resizeCanvases(); if (isConnected()) startHeartbeat(); }
   if (s === 'show') { stopDriveJS(); setTimeout(resizeShowCards, 50); }
 }
 
@@ -1248,8 +1250,10 @@ function makeJoystick(cvId, isStrafe) {
     }
   }
 
+  let touchId = null;
+
   function reset() {
-    active = false; tx = 0; ty = 0; locked = null;
+    active = false; touchId = null; tx = 0; ty = 0; locked = null;
     joyRelease();
     if (isStrafe) drawStrafe(cv, 0, 0, null, 0);
     else          drawDrive(cv, 0, 0, 0);
@@ -1261,15 +1265,36 @@ function makeJoystick(cvId, isStrafe) {
     update(e.clientX, e.clientY); e.preventDefault();
   });
   cv.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (active) return;           // already tracking a touch on this joystick
+    const t = e.changedTouches[0];
+    touchId = t.identifier;
     active = true; getCenter();
     joy[JOY_SIDE].touched = true; onJoyTouch(JOY_SIDE);
-    update(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
+    update(t.clientX, t.clientY);
+  }, { passive: false });
   document.addEventListener('mousemove',   e => { if (active) update(e.clientX, e.clientY); });
-  document.addEventListener('touchmove',   e => { if (active) update(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
-  document.addEventListener('mouseup',     () => { if (active) reset(); });
-  document.addEventListener('touchend',    () => { if (active) reset(); });
-  document.addEventListener('touchcancel', () => { if (active) reset(); });
+  cv.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (!active) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (t.identifier === touchId) { update(t.clientX, t.clientY); return; }
+    }
+  }, { passive: false });
+  document.addEventListener('mouseup', () => { if (active) reset(); });
+  document.addEventListener('touchend', function(e) {
+    if (!active) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === touchId) { reset(); return; }
+    }
+  });
+  document.addEventListener('touchcancel', function(e) {
+    if (!active) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === touchId) { reset(); return; }
+    }
+  });
 }
 
 function stopDriveJS() {
@@ -1757,10 +1782,11 @@ function updateArmJoy(px, py) {
     ajTx = 0; ajTy = rawY;
     const delta = expoAJ(rawY / R) * 90;
     ajArm = Math.round(ajArmAtStrokeStart - delta);
-    ajArm = Math.max(0, Math.min(180, ajArm));
+    const al = SERVO_LIMITS.arm;
+    ajArm = Math.max(al.min, Math.min(al.max, ajArm));
     ajArmPos = ajArm;
     document.getElementById('aj-arm').textContent   = ajArm;
-    document.getElementById('aj-afill').style.width = (ajArm / 180 * 100) + '%';
+    document.getElementById('aj-afill').style.width = ((ajArm - al.min) / (al.max - al.min) * 100) + '%';
     armInit.arm = true; sendArmWS();
   }
 
@@ -1811,7 +1837,8 @@ function initGripperSlider() {
     return Math.max(0, Math.min(1, (clientX - r.left) / r.width));
   }
   function apply(pct) {
-    const v = Math.round(pct * 180);
+    const cl = SERVO_LIMITS.claw;
+    const v = Math.round(cl.min + pct * (cl.max - cl.min));
     document.getElementById('aj-gfill').style.width = (pct * 100) + '%';
     document.getElementById('aj-gthumb').style.left = (pct * 100) + '%';
     document.getElementById('aj-gval').textContent  = v + '°';
@@ -1829,6 +1856,7 @@ function initGripperSlider() {
 
 /* Centre all servos */
 function centreAllServos() {
+  ajBase = 90; ajArm = 90;
   ajBasePos = 90; ajArmPos = 90; ajBaseAtStrokeStart = 90; ajArmAtStrokeStart = 90;
   ajTx = 0; ajTy = 0; ajAxisLock = null;
   ['aj-base','aj-arm'].forEach(id => {
