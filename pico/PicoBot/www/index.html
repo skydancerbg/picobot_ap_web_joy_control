@@ -2,400 +2,763 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>PicoBot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080a0e">
+<meta name="apple-mobile-web-app-title" content="JoyControl v2">
+<link rel="manifest" id="pwa-manifest">
+<title>JoyControl v4.5 · PicoBot</title>
+<!-- Google Fonts removed for offline operation on Pico AP; fallback to monospace -->
 <style>
-/* reset */
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
-html,body{width:100%;height:100%;overflow:hidden;background:#04040e}
+/* ════════════════════════════════════════════
+   RESET & BASE
+════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* neon palette */
-:root{
-  --bg0:#04040e;--bg1:#090916;--bg2:#0f1425;--bg3:#182030;
-  --cy:#00d8ff;--cy-d:rgba(0,216,255,.1);
-  --gn:#00ff80;--gn-d:rgba(0,255,128,.1);
-  --rd:#ff2040;--rd-d:rgba(255,32,64,.1);
-  --am:#ffaa00;
-  --tx:#8aa0bc;--txh:#d0e8ff;--dm:#253545;
-}
-body{display:flex;flex-direction:column;color:var(--tx);font-family:monospace}
+:root {
+  --cyan:       #00e5ff;
+  --cyan-dim:   #00e5ff22;
+  --cyan-faint: #00e5ff0d;
+  --cyan-mid:   #00e5ff44;
+  --cyan-text:  #aaf4ff;
+  --teal:       #00ccbb;
+  --teal-text:  #7be8ff;
+  --purple:     #7c6af0;
+  --purple-dim: #7c6af020;
+  --purple-text:#c4beff;
+  --diag:       #00d4cc;
+  --diag-text:  #6ad8ee;
 
-/* splash */
-#splash{
-  position:fixed;inset:0;z-index:200;background:var(--bg0);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
-  cursor:pointer;transition:opacity .6s;
-}
-#splash.gone{opacity:0;pointer-events:none}
-.sp-logo{
-  font-size:clamp(38px,11vw,76px);font-weight:900;
-  color:var(--cy);letter-spacing:.2em;
-  text-shadow:0 0 24px var(--cy),0 0 50px rgba(0,216,255,.5);
-  animation:sp-pulse 2s ease-in-out infinite;
-}
-.sp-sub{font-size:clamp(9px,2.6vw,13px);color:var(--dm);letter-spacing:.28em}
-.sp-hint{font-size:clamp(9px,2.4vw,12px);color:var(--cy);letter-spacing:.2em;animation:blink .95s step-start infinite}
-@keyframes sp-pulse{
-  0%,100%{text-shadow:0 0 24px var(--cy),0 0 50px rgba(0,216,255,.5)}
-  50%{text-shadow:0 0 36px var(--cy),0 0 70px rgba(0,216,255,.8)}
-}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  /* show-off accent — muted amber-orange, not harsh red */
+  --show:       #c87941;
+  --show-dim:   #c8794118;
+  --show-mid:   #c8794144;
+  --show-text:  #e8aa7a;
+  --show-card:  #c8794130;
 
-/* app wrapper */
-#app{
-  display:flex;flex-direction:column;width:100%;height:100%;
-  opacity:0;transition:opacity .5s;pointer-events:none;
-}
-#app.up{opacity:1;pointer-events:auto}
+  --stop:       #b84040;
+  --stop-dim:   #b8404022;
+  --stop-text:  #e08080;
 
-/* topbar */
-#topbar{
-  display:flex;align-items:center;gap:6px;padding:0 10px;
-  height:44px;flex-shrink:0;background:var(--bg1);
-  border-bottom:1px solid var(--cy);
-  box-shadow:0 1px 14px rgba(0,216,255,.18);
-}
-.tb-title{
-  font-size:14px;font-weight:bold;color:var(--cy);letter-spacing:.2em;
-  text-shadow:0 0 10px rgba(0,216,255,.7);margin-right:auto;
-}
-#conn-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0}
-#dot{
-  width:8px;height:8px;border-radius:50%;background:var(--dm);
-  flex-shrink:0;transition:background .3s,box-shadow .3s;
-}
-#dot.connecting{background:var(--am);box-shadow:0 0 6px var(--am);animation:blink .8s step-start infinite}
-#dot.connected{background:var(--gn);box-shadow:0 0 8px var(--gn)}
-#dot.error{background:var(--rd);box-shadow:0 0 8px var(--rd)}
-#conn-lbl{font-size:9px;color:var(--dm);letter-spacing:.06em;flex-shrink:0}
-.tb-btn{
-  padding:4px 9px;border:1px solid var(--dm);border-radius:3px;
-  background:transparent;color:var(--tx);font:10px/1 monospace;
-  letter-spacing:.06em;cursor:pointer;touch-action:manipulation;
-  transition:border-color .2s,color .2s,box-shadow .2s;flex-shrink:0;
-}
-.tb-btn:active{background:var(--bg3)}
-#arm-btn.armed{border-color:var(--gn);color:var(--gn);box-shadow:0 0 8px rgba(0,255,128,.4)}
-#stop-btn{border-color:var(--rd);color:var(--rd);box-shadow:0 0 6px rgba(255,32,64,.3);font-weight:bold}
-#stop-btn:active{box-shadow:0 0 14px rgba(255,32,64,.7)}
+  --bg:         #0a0c10;
+  --bg2:        #0d1018;
+  --bg3:        #0f1520;
+  --bg4:        #080a0e;
+  --border:     #00e5ff12;
+  --border2:    #00e5ff22;
+  --border3:    #00e5ff44;
+  --muted:      #334;
+  --muted2:     #445;
+  --muted3:     #556;
 
-/* tabbar */
-#tabbar{display:flex;flex-shrink:0;background:var(--bg1);border-bottom:1px solid var(--bg3)}
-.tab{
-  flex:1;padding:8px 4px;text-align:center;
-  font:11px/1 monospace;letter-spacing:.12em;color:var(--dm);
-  border-bottom:2px solid transparent;cursor:pointer;touch-action:manipulation;
-  transition:color .2s,border-color .2s,text-shadow .2s;
+  --green:      #00ff88;
+  --green-dim:  #00ff8822;
 }
-.tab.active{color:var(--cy);border-bottom-color:var(--cy);text-shadow:0 0 8px rgba(0,216,255,.6)}
 
-/* content */
-#content{flex:1;position:relative;overflow:hidden;min-height:0}
-.panel{position:absolute;inset:0;display:none}
-.panel.active{display:flex}
+html, body {
+  width: 100%; height: 100%;
+  background: #060810;
+  overflow: hidden;
+  font-family: 'Orbitron', monospace;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
 
-/* control panel */
-#control-panel{flex-direction:row;align-items:stretch}
+body {
+  overscroll-behavior: none;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
 
-/* zones */
-#left-zone,#right-zone{
-  flex:1;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  gap:8px;padding:8px;min-width:0;
+#app {
+  width: 100vw; height: 100vh;
+  display: flex; flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
-#left-zone{border-right:1px solid var(--bg3)}
 
-/* mode switch */
-#mode-sw{
-  display:flex;border:1px solid var(--dm);border-radius:5px;
-  overflow:hidden;flex-shrink:0;
+/* scanline texture */
+#app::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; z-index: 999;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px, #00000010 2px, #00000010 4px
+  );
 }
-.mode-btn{
-  flex:1;padding:5px 12px;background:transparent;border:none;
-  color:var(--dm);font:9px/1 monospace;letter-spacing:.12em;
-  cursor:pointer;touch-action:manipulation;transition:background .2s,color .2s;
-}
-.mode-btn.on{background:var(--cy-d);color:var(--cy)}
 
-/* strafe context */
-#ctx-strafe{display:flex;flex-direction:column;align-items:center;gap:6px}
+/* ════════════════════════════════════════════
+   TOPBAR
+════════════════════════════════════════════ */
+#topbar {
+  height: 48px;
+  background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px;
+  flex-shrink: 0;
+  position: relative; z-index: 50;
+}
 
-/* arm joy context */
-#ctx-armjoy{display:flex;flex-direction:column;gap:10px;width:100%;align-self:stretch}
-.sv-row{display:flex;flex-direction:column;gap:3px}
-.sv-hd{
-  font-size:9px;color:var(--dm);letter-spacing:.08em;
-  display:flex;justify-content:space-between;
+#tb-title {
+  font-size: clamp(9px, 1.6vw, 11px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  transition: color .3s;
 }
-.sv-hd em{font-style:normal;color:var(--cy);font-size:10px}
-input[type=range]{
-  width:100%;height:3px;appearance:none;-webkit-appearance:none;
-  background:var(--bg3);border-radius:2px;touch-action:none;
-}
-input[type=range]::-webkit-slider-thumb{
-  appearance:none;-webkit-appearance:none;width:18px;height:18px;
-  border-radius:50%;background:var(--cy);box-shadow:0 0 8px var(--cy);cursor:pointer;
-}
-input[type=range]::-moz-range-thumb{
-  width:18px;height:18px;border-radius:50%;background:var(--cy);
-  box-shadow:0 0 8px var(--cy);cursor:pointer;border:none;
-}
-.sv-note{font-size:8px;color:var(--dm)}
-.arm-ctr{
-  padding:7px;border:1px solid var(--cy);border-radius:4px;
-  background:var(--cy-d);color:var(--cy);font:9px/1 monospace;
-  letter-spacing:.1em;cursor:pointer;touch-action:manipulation;width:100%;
-}
-.arm-ctr:active{background:rgba(0,216,255,.22)}
+#tb-title.ctrl  { color: var(--cyan); }
+#tb-title.show  { color: var(--show-text); }
 
-/* joystick */
-.joy-label{font-size:9px;color:var(--dm);letter-spacing:.15em;flex-shrink:0}
-.joy-ring{
-  position:relative;border-radius:50%;
-  width:clamp(110px,33vmin,175px);height:clamp(110px,33vmin,175px);
-  background:radial-gradient(circle,var(--bg2),var(--bg0));
-  border:1.5px solid var(--dm);flex-shrink:0;touch-action:none;
-  transition:border-color .3s,box-shadow .3s;
+.screen-tabs {
+  display: flex;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  margin-left: 10px;
 }
-.joy-ring.armed{border-color:var(--gn);box-shadow:0 0 14px rgba(0,255,128,.22),inset 0 0 20px rgba(0,255,128,.05)}
-.joy-ring.active{border-color:var(--cy);box-shadow:0 0 18px rgba(0,216,255,.45),inset 0 0 20px rgba(0,216,255,.06)}
-.joy-knob{
-  position:absolute;top:50%;left:50%;width:35%;height:35%;border-radius:50%;
-  background:radial-gradient(circle,#4090cc,#1050a0);
-  transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(0,120,220,.5);
-  pointer-events:none;transition:background .3s,box-shadow .3s;
+.stab {
+  font-size: clamp(8px, 1.4vw, 10px);
+  font-weight: 700;
+  padding: 5px 13px;
+  cursor: pointer;
+  letter-spacing: 1px; font-size: clamp(8px,1.3vw,10px);
+  transition: background .18s, color .18s;
+  white-space: nowrap;
+  user-select: none;
 }
-.joy-ring.armed .joy-knob{background:radial-gradient(circle,var(--gn),#008040);box-shadow:0 0 12px rgba(0,255,128,.6)}
-.joy-ring.active .joy-knob{box-shadow:0 0 18px rgba(0,216,255,.8)}
-.joy-mk{
-  position:absolute;font-size:9px;color:var(--dm);pointer-events:none;line-height:1;
-}
-.joy-info{font-size:9px;color:var(--dm);letter-spacing:.05em;flex-shrink:0}
+.stab.on-ctrl { background: var(--cyan);      color: var(--bg); }
+.stab.on-show { background: var(--show);      color: var(--bg); }
+.stab.off     { background: #ffffff10;         color: #b0bec8; }
 
-/* show-off panel */
-#showoff-panel{flex-direction:column;padding:12px;gap:10px;overflow-y:auto;touch-action:pan-y}
-.spd-row{display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:10px;color:var(--dm)}
-.spd-row input{flex:1}
-.spd-v{color:var(--cy);min-width:26px;text-align:right;font-size:11px}
-#mv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.mv-btn{
-  padding:14px 6px;border:1px solid var(--dm);border-radius:5px;
-  background:transparent;color:var(--dm);font:9px/1 monospace;
-  letter-spacing:.08em;text-align:center;cursor:pointer;touch-action:manipulation;
-  transition:all .15s;
-}
-.mv-btn:active,.mv-btn.run{
-  background:var(--cy-d);border-color:var(--cy);
-  color:var(--cy);box-shadow:0 0 10px rgba(0,216,255,.3);
-}
-.mv-stop{
-  padding:10px;flex-shrink:0;border:1px solid var(--rd);border-radius:4px;
-  background:var(--rd-d);color:var(--rd);font:10px/1 monospace;
-  letter-spacing:.1em;cursor:pointer;touch-action:manipulation;
-}
-.mv-stop:active{background:rgba(255,32,64,.25)}
+#tb-right { display: flex; align-items: center; gap: 16px; }
+.tb-sep { width: 1px; height: 28px; background: #00e5ff33; flex-shrink: 0; }
 
-/* toast */
-#toast{
-  position:fixed;bottom:55px;left:50%;transform:translateX(-50%);
-  background:var(--bg3);color:var(--txh);padding:5px 14px;
-  border-radius:16px;border:1px solid var(--dm);font-size:10px;
-  opacity:0;transition:opacity .3s;pointer-events:none;z-index:99;
-  letter-spacing:.05em;white-space:nowrap;
+.cog, .fsBtn {
+  width: 44px; height: 44px; border-radius: 11px;
+  background: var(--bg3); border: 1px solid #00e5ff55;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: border-color .15s, background .15s; flex-shrink: 0;
 }
+.cog:hover { border-color: var(--cyan-mid); }
+.fsBtn { border-color: #00e5ff88 !important; background: #00e5ff12 !important; }
+.fsBtn:hover { border-color: var(--cyan) !important; background: #00e5ff22 !important; }
+.cog svg { width: 24px; height: 24px; fill: #9de8f8; }
+.fsBtn svg { width: 24px; height: 24px; fill: #9de8f8; }
+
+.wifi-pill {
+  display: flex; align-items: center; gap: 5px;
+  border-radius: 20px; padding: 4px 12px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all .2s;
+}
+.wifi-pill.disconnected { background: #1a0a08; border-color: var(--stop-dim); }
+.wifi-pill.connected    { background: #0d1a0f; border-color: var(--green-dim); }
+#pill-dot { width: 8px; height: 8px; border-radius: 50%; }
+.wifi-pill.disconnected #pill-dot { background: var(--stop); }
+.wifi-pill.connected    #pill-dot { background: var(--green); animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+#pill-txt { font-family: 'Share Tech Mono', monospace; font-size: clamp(9px,1.4vw,11px); font-weight: 600; }
+.wifi-pill.disconnected #pill-txt { color: var(--stop-text); }
+.wifi-pill.connected    #pill-txt { color: var(--green); }
+#tb-url { font-family: 'Share Tech Mono', monospace; font-size: clamp(7px,1.1vw,9px); color: var(--muted); max-width: 20vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ════════════════════════════════════════════
+   CONNECTION DIALOG
+════════════════════════════════════════════ */
+#conn-dialog {
+  position: absolute; top: 48px; left: 0; right: 0;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border2);
+  padding: 12px 16px 14px;
+  z-index: 40;
+  transform-origin: top center;
+  transition: transform .25s ease, opacity .25s ease;
+}
+#conn-dialog.hidden  { transform: scaleY(0); opacity: 0; pointer-events: none; }
+#conn-dialog.visible { transform: scaleY(1); opacity: 1; }
+
+.conn-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.conn-field { display: flex; flex-direction: column; gap: 4px; }
+.conn-lbl {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(7px,1.1vw,8px); color: var(--muted2); letter-spacing: 1.5px;
+}
+.conn-input {
+  background: var(--bg4); border: 1px solid var(--border2); border-radius: 7px;
+  color: var(--cyan); font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(11px,1.8vw,13px);
+  padding: 6px 10px; outline: none; height: 34px;
+  transition: border-color .15s;
+}
+.conn-input:focus { border-color: var(--cyan-mid); }
+#url-input { width: clamp(160px, 26vw, 210px); }
+#ms-input  { width: clamp(70px, 9vw, 86px); }
+#action-btn {
+  height: 34px; padding: 0 20px; border-radius: 7px; border: none;
+  font-family: 'Orbitron', monospace; font-size: clamp(8px,1.4vw,10px);
+  font-weight: 700; letter-spacing: 1.5px; cursor: pointer;
+  transition: background .15s; flex-shrink: 0;
+}
+#action-btn.connect    { background: var(--cyan);  color: var(--bg); }
+#action-btn.disconnect { background: var(--stop);  color: #fff; }
+.conn-hint {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(7px,1vw,8px); color: #2a3a44;
+  margin-top: 8px; line-height: 1.7;
+}
+
+/* ════════════════════════════════════════════
+   NOT-CONNECTED OVERLAY
+════════════════════════════════════════════ */
+#disc-overlay {
+  position: absolute; inset: 40px 0 0 0;
+  background: #0a0c10bb;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 30; cursor: pointer;
+  transition: opacity .3s;
+}
+#disc-overlay.hidden { opacity: 0; pointer-events: none; }
+.disc-msg { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.disc-ring {
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 2px solid var(--stop-dim);
+  display: flex; align-items: center; justify-content: center;
+}
+.disc-x   { font-size: 26px; color: var(--stop-text); line-height: 1; }
+.disc-txt { font-family: 'Share Tech Mono'; font-size: clamp(10px,1.8vw,13px); color: var(--stop-text); letter-spacing: 1px; }
+.disc-tap { font-family: 'Share Tech Mono'; font-size: clamp(8px,1.3vw,10px); color: var(--muted); letter-spacing: 1px; }
+
+/* ════════════════════════════════════════════
+   SCREENS
+════════════════════════════════════════════ */
+.screen { flex: 1; display: none; overflow: hidden; min-height: 0; }
+.screen.active { display: flex; }
+
+/* ════════════════════════════════════════════
+   CONTROL SCREEN
+════════════════════════════════════════════ */
+#screen-ctrl { flex-direction: row; }
+
+/* LEFT panel */
+#left {
+  flex: 1;
+  min-width: 0;
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--border);
+}
+
+/* tab-bar moved into topbar as mode-group */
+
+/* ── MODE TOGGLE (strafe / arm) — lives in topbar ── */
+#mode-group {
+  display: flex;
+  background: #0d1018;
+  border: 1px solid #00e5ff18;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.mtab {
+  font-size: clamp(7px,1.1vw,9px);
+  font-weight: 700;
+  padding: 3px 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+  user-select: none;
+}
+.mtab.on-strafe { background: #00d4cc; color: #0a0c10; }
+.mtab.on-armjoy { background: #5a52c0; color: #fff; }
+.mtab.off       { color: #b0bec8; background: #ffffff10; }
+
+/* strafe panel */
+#panel-strafe {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: clamp(4px,.8vh,8px) clamp(6px,1vw,10px);
+  gap: clamp(3px,.5vh,6px);
+}
+
+
+
+/* arm panel */
+/* ── ARM JOY PANEL ── */
+#panel-armjoy {
+  flex: 1; display: none; flex-direction: column;
+  padding: clamp(4px,.8vh,8px) clamp(6px,1vw,10px);
+  gap: clamp(3px,.5vh,6px);
+}
+#panel-armjoy.show { display: flex; }
+
+/* gripper slider row */
+.gripper-row { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.gripper-hdr { display: flex; justify-content: space-between; align-items: baseline; }
+.gripper-name { font-size: clamp(8px,1.3vw,10px); font-weight: 600; color: var(--cyan); letter-spacing: 1px; }
+.gripper-hint { font-family: 'Share Tech Mono'; font-size: clamp(6px,.9vw,8px); color: #1e2d36; }
+.gripper-val-row { display: flex; align-items: center; gap: 6px; }
+#aj-gtrack {
+  flex: 1; height: 10px; background: #1a2535;
+  border-radius: 5px; border: 1px solid #00e5ff55;
+  position: relative; cursor: pointer;
+  pointer-events: all; /* override s-track pointer-events:none */
+  touch-action: none;
+}
+#aj-gfill {
+  height: 100%; border-radius: 5px;
+  background: #00e5ff66; pointer-events: none;
+}
+#aj-gthumb {
+  width: 28px; height: 28px; background: #00e5ff;
+  border-radius: 50%; position: absolute; top: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 6px #00e5ff22; pointer-events: none;
+}
+.gripper-val { font-family: 'Share Tech Mono'; font-size: clamp(10px,1.6vw,12px); color: var(--cyan); min-width: 30px; text-align: right; }
+
+/* arm joystick + readouts row */
+.armjoy-row { flex: 1; display: flex; gap: clamp(4px,.8vw,8px); align-items: center; min-height: 0; }
+.armjoy-readouts { display: flex; flex-direction: column; justify-content: space-around; flex: 1; gap: 4px; }
+.aj-readout { background: #0f1520; border: 1px solid #7c6af033; border-radius: 8px; padding: 4px 8px; }
+.aj-rlabel { font-family: 'Share Tech Mono'; font-size: clamp(6px,.9vw,7px); color: #334; letter-spacing: 1px; }
+.aj-rval { font-size: clamp(12px,2vw,15px); font-weight: 700; color: #c4beff; }
+.aj-rdeg { font-size: clamp(7px,1vw,8px); color: #223; }
+.aj-rbar { height: 3px; background: #0d141c; border-radius: 2px; margin-top: 3px; }
+.aj-rfill { height: 100%; border-radius: 2px; background: #7c6af0; }
+
+/* centre button */
+.centre-btn {
+  height: clamp(22px,3.5vh,28px); flex-shrink: 0;
+  background: #0f1520; border: 1px solid #00e5ff22; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; transition: background .1s;
+  font-family: 'Share Tech Mono'; font-size: clamp(7px,1.1vw,9px);
+  color: #7be8ff; letter-spacing: 1.5px;
+}
+.centre-btn:active { background: #00e5ff0a; }
+
+
+/* divider */
+#divider { width: 1px; background: var(--border); flex-shrink: 0; margin: 10px 0; }
+
+/* right panel */
+#right {
+  flex: 1; min-width: 0;
+  /* equal to left — both flex:1 means 50/50 split */
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start;
+  padding: clamp(4px,.8vh,8px) clamp(6px,1vw,10px);
+  gap: 4px;
+  overflow: hidden;
+}
+
+/* tel-row removed */
+
+/* canvas */
+canvas { display: block; touch-action: none; }
+
+/* ════════════════════════════════════════════
+   SHOW OFF SCREEN
+════════════════════════════════════════════ */
+#screen-show { flex-direction: column; }
+
+.show-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+.show-hint {
+  font-family: 'Share Tech Mono'; font-size: clamp(7px,1vw,8px);
+  color: var(--muted); letter-spacing: 1.5px;
+  padding: clamp(3px,.5vh,5px) 14px clamp(2px,.3vh,3px);
+  flex-shrink: 0;
+}
+
+.move-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: clamp(4px,.7vw,7px);
+  padding: 0 clamp(6px,1vw,10px) clamp(4px,.7vh,6px);
+  flex: 1; min-height: 0;
+}
+
+.move-card {
+  background: var(--bg2);
+  border: 1px solid var(--show-dim);
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  padding: clamp(3px,.5vh,5px) clamp(2px,.4vw,4px) clamp(2px,.4vh,4px);
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+  position: relative; overflow: hidden;
+  user-select: none;
+}
+.move-card:hover { background: #160f08; border-color: var(--show-mid); }
+
+/* Active card — canvas/name/sub hidden, big STOP overlay shown instead */
+.move-card.active { background: #1a0404; border: 2px solid var(--stop); }
+.move-card.active .mc-canvas,
+.move-card.active .mc-name,
+.move-card.active .mc-sub { visibility: hidden; }
+.move-card.active .mc-stop { display: flex; }
+
+.mc-canvas { flex-shrink: 0; }
+.mc-name {
+  font-size: clamp(9px,1.4vw,13px); font-weight: 700;
+  color: var(--show-text); letter-spacing: .5px;
+  text-align: center; margin-top: 3px; line-height: 1.3;
+}
+.mc-sub {
+  font-family: 'Share Tech Mono'; font-size: clamp(8px,1.1vw,11px);
+  color: #aabbcc; text-align: center; line-height: 1.3;
+}
+
+/* STOP overlay — fills the card when active */
+.mc-stop {
+  display: none;
+  position: absolute; inset: 0;
+  flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: clamp(3px,.5vh,6px);
+  background: #1a0404;
+  border-radius: 9px;
+}
+.mc-stop-sq {
+  width: clamp(18px,3.5vw,28px); height: clamp(18px,3.5vw,28px);
+  background: var(--stop); border-radius: 4px;
+  animation: stoppulse 1s infinite;
+}
+@keyframes stoppulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.mc-stop-lbl {
+  font-size: clamp(7px,1.1vw,9px); font-weight: 700;
+  color: var(--stop-text); letter-spacing: 1.5px;
+}
+
+/* show-status removed — stop is now the active card itself */
+
+/* log bar */
+/* log bar removed — info shown in telemetry strips */
+/* ════════════════════════════════════════════
+   SPLASH SCREEN
+════════════════════════════════════════════ */
+#splash {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #060810;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#splash-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 16px;
+  user-select: none; pointer-events: none;
+}
+#splash-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(28px, 8vw, 52px);
+  font-weight: 900; color: #00e5ff;
+  letter-spacing: 8px;
+}
+#splash-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(11px, 3vw, 16px);
+  color: #334; letter-spacing: 4px;
+}
+#splash-btn {
+  margin-top: 20px;
+  position: relative;
+  width: clamp(140px, 30vw, 180px);
+  height: clamp(140px, 30vw, 180px);
+  display: flex; align-items: center; justify-content: center;
+}
+#splash-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid #00e5ff44;
+  animation: splash-pulse 1.8s ease-in-out infinite;
+}
+@keyframes splash-pulse {
+  0%   { transform: scale(0.92); opacity: .4; border-color: #00e5ff44; }
+  50%  { transform: scale(1.06); opacity: 1;  border-color: #00e5ffaa; }
+  100% { transform: scale(0.92); opacity: .4; border-color: #00e5ff44; }
+}
+#splash-btn span {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(11px, 2.5vw, 14px);
+  font-weight: 700; color: #00e5ff;
+  letter-spacing: 2px; text-align: center;
+}
+#splash-hint {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(8px, 1.8vw, 11px);
+  color: #223; letter-spacing: 2px;
+}
+
+
+
+
+/* exit fullscreen handled by topbar compress icon */
+
+
+/* ════════════════════════════════════════════
+   PORTRAIT → LANDSCAPE ROTATION
+   Applied via JS only on real portrait phones
+   (max-width 600px portrait). Avoids firing in
+   browser preview windows which happen to be tall.
+════════════════════════════════════════════ */
+
 </style>
 </head>
 <body>
 
-<!-- Splash screen -->
-<div id="splash" onclick="dismissSplash()">
-  <div class="sp-logo">PICOBOT</div>
-  <div class="sp-sub">ADVANCED CONTROL v2</div>
-  <div class="sp-hint">▶ TAP TO ENTER ◀</div>
+<!-- ══ FULLSCREEN SPLASH ══ -->
+<div id="splash">
+  <div id="splash-inner">
+    <div id="splash-logo">PICOBOT</div>
+    <div id="splash-sub">JOYCONTROL v2</div>
+    <div id="splash-btn">
+      <div id="splash-ring"></div>
+      <span>TAP TO LAUNCH</span>
+    </div>
+    <div id="splash-hint">Fullscreen · Landscape · WiFi Control</div>
+  </div>
 </div>
 
-<!-- App -->
-<div id="app">
+<div id="app" style="display:none;">
 
-  <!-- Topbar -->
+  <!-- ══ TOPBAR ══ -->
   <div id="topbar">
-    <span class="tb-title">PICOBOT</span>
-    <div id="conn-wrap">
-      <div id="dot" title="offline"></div>
-      <span id="conn-lbl">OFFLINE</span>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div id="tb-title" class="ctrl">PICOBOT</div>
+      <div class="screen-tabs">
+        <div class="stab on-ctrl" id="stab-ctrl" onclick="switchScreen('ctrl')">CONTROL</div>
+        <div class="stab off"     id="stab-show" onclick="switchScreen('show')">✦ SHOW OFF</div>
+      </div>
+      <div class="tb-sep"></div>
+      <div id="mode-group" style="display:flex;">
+        <div class="mtab on-strafe" id="mtab-strafe"  onclick="showLeftTab('strafe')">⊕ STRAFE</div>
+        <div class="mtab off"       id="mtab-armjoy"  onclick="showLeftTab('armjoy')">✦ ARM JOY</div>
+      </div>
     </div>
-    <button class="tb-btn" id="arm-btn" onclick="toggleArm()">DISARMED</button>
-    <button class="tb-btn" id="stop-btn" onclick="sendStop()">&#9632;&nbsp;STOP</button>
+    <div id="tb-right">
+      <div id="tb-url">PICO W</div>
+      <div class="tb-sep"></div>
+      <div class="fsBtn" id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
+        <svg id="fsIcon" viewBox="0 0 24 24">
+          <path id="fsPath" d="M3 3h5v2H5v3H3V3zm13 0h5v5h-2V5h-3V3zM3 16h2v3h3v2H3v-5zm16 3h-3v2h5v-5h-2v3z"/>
+        </svg>
+      </div>
+      <div class="cog" id="cogBtn" onclick="pillClicked()">
+        <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6zm7.2-2.4l1.5-1.2-1.5-2.6-1.9.8a6.8 6.8 0 00-1.4-.8L15.6 7H12.4l-.3 1.8a6.8 6.8 0 00-1.4.8l-1.9-.8-1.5 2.6 1.5 1.2a6.6 6.6 0 000 1.6l-1.5 1.2 1.5 2.6 1.9-.8c.4.3.9.6 1.4.8l.3 1.8h3.2l.3-1.8c.5-.2 1-.5 1.4-.8l1.9.8 1.5-2.6-1.5-1.2a6.6 6.6 0 000-1.6z"/></svg>
+      </div>
+      <div class="tb-sep"></div>
+      <button id="arm-btn" onclick="toggleArm()" style="height:28px;padding:0 10px;border-radius:6px;border:1px solid #334;background:transparent;color:#556;font-family:'Orbitron',monospace;font-size:clamp(7px,1.1vw,9px);font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;">DISARMED</button>
+      <div class="tb-sep"></div>
+      <div class="wifi-pill disconnected" id="status-pill" onclick="pillClicked()">
+        <div id="pill-dot"></div>
+        <div id="pill-txt">NOT CONNECTED</div>
+      </div>
+    </div>
   </div>
 
-  <!-- Tab bar -->
-  <div id="tabbar">
-    <div class="tab active" id="tab-control" onclick="showTab('control')">CONTROL</div>
-    <div class="tab" id="tab-showoff" onclick="showTab('showoff')">SHOW&nbsp;OFF</div>
+  <!-- ══ CONNECTION DIALOG ══ -->
+  <div id="conn-dialog" class="hidden">
+    <div class="conn-row">
+      <div class="conn-field">
+        <div class="conn-lbl">WEBSOCKET</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:clamp(11px,1.8vw,13px);color:var(--cyan);padding:6px 0;">ws://192.168.4.1/ws</div>
+      </div>
+      <div id="ws-dialog-status" style="font-family:'Share Tech Mono',monospace;font-size:clamp(9px,1.4vw,11px);color:var(--stop-text);align-self:flex-end;">NOT CONNECTED</div>
+    </div>
+    <div class="conn-hint">WebSocket auto-connects on page load. ARM the robot before driving. Page hidden → auto STOP + DISARM.</div>
   </div>
 
-  <!-- Content -->
-  <div id="content">
+  <!-- ══ NOT-CONNECTED OVERLAY ══ -->
+  <div id="disc-overlay" onclick="pillClicked()">
+    <div class="disc-msg">
+      <div class="disc-ring"><div class="disc-x">✕</div></div>
+      <div class="disc-txt">NOT CONNECTED</div>
+      <div class="disc-tap">TAP TO CONFIGURE</div>
+    </div>
+  </div>
 
-    <!-- CONTROL panel -->
-    <div class="panel active" id="control-panel">
+  <!-- ══ SCREEN: CONTROL ══ -->
+  <div class="screen active" id="screen-ctrl">
 
-      <!-- Left zone -->
-      <div id="left-zone">
-        <div id="mode-sw">
-          <button class="mode-btn on" id="ms-strafe" onclick="setMode('strafe')">STRAFE</button>
-          <button class="mode-btn"    id="ms-armjoy" onclick="setMode('armjoy')">ARM&nbsp;JOY</button>
-        </div>
+    <!-- LEFT -->
+    <div id="left">
+      <!-- STRAFE PANEL -->
+      <div id="panel-strafe">
+        <canvas id="cvStrafe"></canvas>
 
-        <!-- STRAFE: mecanum joystick -->
-        <div id="ctx-strafe">
-          <div class="joy-label">MECANUM</div>
-          <div class="joy-ring" id="lring">
-            <span class="joy-mk" style="top:3px;left:50%;transform:translateX(-50%)">&#9650;</span>
-            <span class="joy-mk" style="bottom:3px;left:50%;transform:translateX(-50%)">&#9660;</span>
-            <span class="joy-mk" style="left:3px;top:50%;transform:translateY(-50%)">&#9664;</span>
-            <span class="joy-mk" style="right:3px;top:50%;transform:translateY(-50%)">&#9654;</span>
-            <div class="joy-knob" id="lknob"></div>
-          </div>
-          <div id="linfo" class="joy-info">f:0 s:0</div>
-        </div>
-
-        <!-- ARM JOY: arm sliders -->
-        <div id="ctx-armjoy" style="display:none">
-          <div class="sv-row">
-            <div class="sv-hd">BASE ROTATION <em id="base-val">90&deg;</em></div>
-            <input type="range" id="base-slider" min="0" max="180" value="90" oninput="onServo('base',this)">
-          </div>
-          <div class="sv-row">
-            <div class="sv-hd">ARM RAISE <em id="arm-val">90&deg;</em></div>
-            <input type="range" id="arm-slider" min="40" max="140" value="90" oninput="onServo('arm',this)">
-          </div>
-          <div class="sv-row">
-            <div class="sv-hd">CLAW <em id="claw-val">&#8212;</em></div>
-            <input type="range" id="claw-slider" min="40" max="140" value="90" oninput="onServo('claw',this)">
-          </div>
-          <div class="sv-note">Claw sent on first touch only</div>
-          <button class="arm-ctr" onclick="centreArm()">&#8982; CENTRE ARM (90&deg;)</button>
-        </div>
       </div>
 
-      <!-- Right zone: drive joystick -->
-      <div id="right-zone">
-        <div class="joy-label">DRIVE</div>
-        <div class="joy-ring" id="rring">
-          <span class="joy-mk" style="top:3px;left:50%;transform:translateX(-50%)">&#9650;</span>
-          <span class="joy-mk" style="bottom:3px;left:50%;transform:translateX(-50%)">&#9660;</span>
-          <span class="joy-mk" style="left:3px;top:50%;transform:translateY(-50%)">&#9664;</span>
-          <span class="joy-mk" style="right:3px;top:50%;transform:translateY(-50%)">&#9654;</span>
-          <div class="joy-knob" id="rknob"></div>
+      <!-- ARM JOY PANEL -->
+      <div id="panel-armjoy">
+
+        <!-- GRIPPER SLIDER -->
+        <div class="gripper-row">
+          <div class="gripper-hdr">
+            <span class="gripper-name">GRIPPER</span>
+            <span class="gripper-hint">OPEN ←—→ CLOSE</span>
+          </div>
+          <div class="gripper-val-row">
+            <div id="aj-gwrap" style="flex:1;position:relative;height:40px;display:flex;align-items:center;cursor:pointer;touch-action:none;">
+              <div id="aj-gtrack">
+                <div id="aj-gfill" style="width:50%"></div>
+                <div id="aj-gthumb" style="left:50%"></div>
+              </div>
+            </div>
+            <div class="gripper-val" id="aj-gval">90°</div>
+          </div>
         </div>
-        <div id="rinfo" class="joy-info">f:0 r:0</div>
+
+        <!-- ARM JOYSTICK + READOUTS -->
+        <div class="armjoy-row">
+          <canvas id="cvArmJoy"></canvas>
+          <div class="armjoy-readouts">
+            <div class="aj-readout">
+              <div class="aj-rlabel">BASE ← →</div>
+              <div><span class="aj-rval" id="aj-base">90</span><span class="aj-rdeg">°</span></div>
+              <div class="aj-rbar"><div class="aj-rfill" id="aj-bfill" style="width:50%"></div></div>
+            </div>
+            <div class="aj-readout">
+              <div class="aj-rlabel">ARM ↑ ↓</div>
+              <div><span class="aj-rval" id="aj-arm">90</span><span class="aj-rdeg">°</span></div>
+              <div class="aj-rbar"><div class="aj-rfill" id="aj-afill" style="width:50%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTRE ALL -->
+        <div class="centre-btn" onclick="centreAllServos()">
+          <span>⊙</span> CENTRE ALL SERVOS
+        </div>
+
       </div>
 
-    </div><!-- #control-panel -->
-
-    <!-- SHOW OFF panel -->
-    <div class="panel" id="showoff-panel">
-      <div class="spd-row">
-        <span>SPEED</span>
-        <input type="range" id="mv-speed" min="20" max="100" value="50"
-               oninput="document.getElementById('mv-spd-v').textContent=this.value">
-        <span class="spd-v" id="mv-spd-v">50</span>
-      </div>
-      <div id="mv-grid">
-        <div class="mv-btn" onclick="runMove('spin')">SPIN</div>
-        <div class="mv-btn" onclick="runMove('moonwalk')">MOONWALK</div>
-        <div class="mv-btn" onclick="runMove('crab_dash')">CRAB DASH</div>
-        <div class="mv-btn" onclick="runMove('wiggle')">WIGGLE</div>
-        <div class="mv-btn" onclick="runMove('orbit')">ORBIT</div>
-        <div class="mv-btn" onclick="runMove('rear_pivot')">REAR PIVOT</div>
-        <div class="mv-btn" onclick="runMove('planet')">PLANET</div>
-        <div class="mv-btn" onclick="runMove('twirl')">TWIRL</div>
-        <div class="mv-btn" onclick="runMove('figure8')">FIGURE 8</div>
-        <div class="mv-btn" onclick="runMove('tank_drift')">TANK DRIFT</div>
-      </div>
-      <button class="mv-stop" onclick="sendStop()">&#9632; STOP MOVE</button>
     </div>
 
-  </div><!-- #content -->
-</div><!-- #app -->
+    <div id="divider"></div>
 
-<div id="toast"></div>
+    <!-- RIGHT — DRIVE JOYSTICK -->
+    <div id="right">
+      <canvas id="cvDrive"></canvas>
+
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: SHOW OFF ══ -->
+  <div class="screen" id="screen-show">
+    <div class="show-body">
+      <div class="show-hint">TAP TO RUN · TAP AGAIN TO STOP · EACH MOVE USES A UNIQUE MECANUM WHEEL PATTERN</div>
+      <div class="move-grid" id="moveGrid">
+        <div class="move-card" data-id="0" onclick="selMove(0)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv0"></canvas><div class="mc-name">PIROUETTE</div><div class="mc-sub">Spin in place</div></div>
+        <div class="move-card" data-id="1" onclick="selMove(1)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv1"></canvas><div class="mc-name">MOONWALK</div><div class="mc-sub">Slide sideways</div></div>
+        <div class="move-card" data-id="2" onclick="selMove(2)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv2"></canvas><div class="mc-name">ORBIT</div><div class="mc-sub">Circle + face fixed dir</div></div>
+        <div class="move-card" data-id="3" onclick="selMove(3)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv3"></canvas><div class="mc-name">REAR PIVOT</div><div class="mc-sub">Arc rear axle</div></div>
+        <div class="move-card" data-id="4" onclick="selMove(4)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv4"></canvas><div class="mc-name">PLANET</div><div class="mc-sub">Orbit + counter-spin</div></div>
+        <div class="move-card" data-id="5" onclick="selMove(5)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv5"></canvas><div class="mc-name">FIGURE-8</div><div class="mc-sub">Looping path</div></div>
+        <div class="move-card" data-id="6" onclick="selMove(6)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv6"></canvas><div class="mc-name">WIGGLE</div><div class="mc-sub">Rapid strafe dance</div></div>
+        <div class="move-card" data-id="7" onclick="selMove(7)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv7"></canvas><div class="mc-name">TWIRL</div><div class="mc-sub">Drive + spin spiral</div></div>
+        <div class="move-card" data-id="8" onclick="selMove(8)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv8"></canvas><div class="mc-name">CRAB DASH</div><div class="mc-sub">Diagonal sprint</div></div>
+        <div class="move-card" data-id="9" onclick="selMove(9)"><div class="mc-stop"><div class="mc-stop-sq"></div><div class="mc-stop-lbl">STOP</div></div><canvas class="mc-canvas" id="cv9"></canvas><div class="mc-name">TANK DRIFT</div><div class="mc-sub">Pivot one corner</div></div>
+      </div>
+    </div>
+
+  </div>
+
+
+
+</div><!-- /app -->
+
+
 
 <script>
-// ── config ────────────────────────────────────────────────────────────────────
+'use strict';
+
+/* ════════════════════════════════════
+   WEBSOCKET CONFIG & STATE
+════════════════════════════════════ */
 const WS_URL = 'ws://' + location.hostname + '/ws';
-const DRIVE_HZ = 20;
-const HEARTBEAT_HZ = 5;
+const DRIVE_HZ = 20, HEARTBEAT_HZ = 5;
 
-// Servo safe limits — must match hardware_map.py
 const SERVO_LIMITS = {
-  base: { min:0,   max:180, home:90 },
-  arm:  { min:40,  max:140, home:90 },
-  claw: { min:40,  max:140, home:90 },
+  base: { min: 0,   max: 180, home: 90 },
+  arm:  { min: 40,  max: 140, home: 90 },
+  claw: { min: 40,  max: 140, home: 90 },
 };
-function clampServo(axis, v) {
-  const l = SERVO_LIMITS[axis];
-  return Math.max(l.min, Math.min(l.max, v));
-}
+function clampServo(axis, v) { var l = SERVO_LIMITS[axis]; return Math.max(l.min, Math.min(l.max, v)); }
 
-// ── state ─────────────────────────────────────────────────────────────────────
-let sock = null, armed = false, seq = 0;
-const armInit = { base:false, arm:false, claw:false };
-let ctrlMode = 'strafe';
-const joy = {
-  left:  { x:0, y:0, touched:false },
-  right: { x:0, y:0, touched:false },
-};
-let driveOwner = null;
+var sock = null, armed = false, seq = 0;
+var armInit = { base: false, arm: false, claw: false };
+var joy = { left: { x:0, y:0, touched:false }, right: { x:0, y:0, touched:false } };
+var driveOwner = null, driveInterval = null, heartbeatInterval = null;
+var activeMove = null;
+var ajClaw = 90;
 
 function nextSeq() { seq = (seq + 1) & 0xFFFF; return seq; }
 
-// ── splash ────────────────────────────────────────────────────────────────────
-let splashDone = false;
-function dismissSplash() {
-  if (splashDone) return;
-  splashDone = true;
-  const sp = document.getElementById('splash');
-  sp.classList.add('gone');
-  setTimeout(() => { sp.style.display = 'none'; }, 700);
-  document.getElementById('app').classList.add('up');
+/* ════════════════════════════════════
+   CONNECTION
+════════════════════════════════════ */
+function pillClicked() {
+  var d = document.getElementById('conn-dialog');
+  d.classList.toggle('hidden');
+  d.classList.toggle('visible');
 }
-setTimeout(dismissSplash, 3500);
 
-// ── WebSocket ─────────────────────────────────────────────────────────────────
 function connect() {
-  setDot('connecting'); setConnLbl('CONNECTING');
+  setPill(false, 'CONNECTING…');
   sock = new WebSocket(WS_URL);
-  sock.onopen = () => {
+  sock.onopen = function() {
     send('HELLO,1,picobot-ui-v2');
-    setDot('connected'); setConnLbl('ONLINE');
+    setPill(true, 'CONNECTED');
+    setWsDialogStatus('CONNECTED');
+    document.getElementById('disc-overlay').classList.add('hidden');
     resetArm();
   };
-  sock.onclose = () => {
-    setDot('error'); setConnLbl('OFFLINE');
+  sock.onclose = function() {
+    setPill(false, 'OFFLINE');
+    setWsDialogStatus('OFFLINE — reconnecting…');
+    document.getElementById('disc-overlay').classList.remove('hidden');
     resetArm();
     setTimeout(connect, 2000);
   };
-  sock.onerror = () => { setDot('error'); setConnLbl('ERROR'); resetArm(); };
-  sock.onmessage = e => handleMsg(e.data);
+  sock.onerror = function() {
+    setPill(false, 'ERROR');
+    setWsDialogStatus('ERROR');
+    resetArm();
+  };
+  sock.onmessage = function(e) { handleMsg(e.data); };
 }
 
 function send(text) { if (sock && sock.readyState === 1) sock.send(text); }
-function isConn() { return sock && sock.readyState === 1; }
+function isConnected() { return sock && sock.readyState === 1; }
 
-// ── message handler ───────────────────────────────────────────────────────────
 function handleMsg(text) {
-  const p = text.split(',');
-  const cmd = p[0];
-  if (cmd === 'ERR') toast('ERR: ' + p.slice(2).join(' '));
-  else if (cmd === 'K') toast('K: ' + p.slice(1).join(' '));
-  // S frame fields available for future telemetry display
+  var p = text.split(',');
+  if (p[0] === 'ERR') logIt('ERR: ' + p.slice(2).join(' '), '');
+  else if (p[0] === 'K') logIt('K: ' + p.slice(1).join(' '), '');
 }
 
-// ── ARM / DISARM ──────────────────────────────────────────────────────────────
+function setPill(isConn, label) {
+  var pill = document.getElementById('status-pill');
+  if (pill) pill.className = 'wifi-pill ' + (isConn ? 'connected' : 'disconnected');
+  var txt = document.getElementById('pill-txt');
+  if (txt) txt.textContent = label || (isConn ? 'CONNECTED' : 'NOT CONNECTED');
+}
+function setWsDialogStatus(msg) {
+  var el = document.getElementById('ws-dialog-status');
+  if (el) el.textContent = msg;
+}
+
+/* ════════════════════════════════════
+   ARM / DISARM / STOP
+════════════════════════════════════ */
 function toggleArm() {
-  if (!isConn()) { toast('NOT CONNECTED'); return; }
+  if (!isConnected()) { logIt('NOT CONNECTED', ''); return; }
   if (armed) { send('ARM,' + nextSeq() + ',0'); setArmedUI(false); }
   else        { send('ARM,' + nextSeq() + ',1'); setArmedUI(true);  }
 }
@@ -406,23 +769,26 @@ function resetArm() {
   setArmedUI(false);
 }
 
-function setArmedUI(v) {
-  armed = v;
-  const b = document.getElementById('arm-btn');
-  b.textContent = v ? 'ARMED' : 'DISARMED';
-  b.classList.toggle('armed', v);
-  document.querySelectorAll('.joy-ring').forEach(r => r.classList.toggle('armed', v));
+function setArmedUI(val) {
+  armed = val;
+  var btn = document.getElementById('arm-btn');
+  if (btn) {
+    btn.textContent = val ? 'ARMED' : 'DISARMED';
+    btn.style.borderColor = val ? 'var(--green)' : '#334';
+    btn.style.color       = val ? 'var(--green)' : '#556';
+  }
 }
 
 function sendStop() {
   stopHeartbeat(); stopDriveLoop(); driveOwner = null;
+  joy.left.x = 0; joy.left.y = 0; joy.left.touched = false;
+  joy.right.x = 0; joy.right.y = 0; joy.right.touched = false;
   send('STOP,' + nextSeq());
   send('ARM,' + nextSeq() + ',0');
   setArmedUI(false);
-  if (activeMovBtn) { activeMovBtn.classList.remove('run'); activeMovBtn = null; }
+  stopMove();
 }
 
-// ── page visibility ───────────────────────────────────────────────────────────
 document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
     send('STOP,' + nextSeq());
@@ -431,218 +797,1069 @@ document.addEventListener('visibilitychange', function() {
   }
 });
 
-// ── drive loop ────────────────────────────────────────────────────────────────
-var driveIv = null, hbIv = null;
-function startDriveLoop() { if (!driveIv) driveIv = setInterval(sendDrive, 1000 / DRIVE_HZ); }
-function stopDriveLoop()  { if (driveIv)  { clearInterval(driveIv);  driveIv = null;  } }
-function startHeartbeat() { if (!hbIv)    hbIv    = setInterval(sendZero, 1000 / HEARTBEAT_HZ); }
-function stopHeartbeat()  { if (hbIv)     { clearInterval(hbIv);     hbIv    = null;  } }
+/* ════════════════════════════════════
+   DRIVE LOOP
+════════════════════════════════════ */
+function startDriveLoop()  { if (!driveInterval)     driveInterval     = setInterval(sendDrive,     1000/DRIVE_HZ);     }
+function stopDriveLoop()   { if (driveInterval)     { clearInterval(driveInterval);     driveInterval     = null; } }
+function startHeartbeat()  { if (!heartbeatInterval) heartbeatInterval = setInterval(sendZeroDrive, 1000/HEARTBEAT_HZ); }
+function stopHeartbeat()   { if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; } }
 
 function sendDrive() {
-  if (!isConn()) return;
+  if (!isConnected()) return;
   var f = 0, s = 0, r = 0;
-  if (driveOwner === 'left')  { f = Math.round(joy.left.y  * 100); s = Math.round(joy.left.x  * 100); }
-  if (driveOwner === 'right') { f = Math.round(joy.right.y * 100); r = Math.round(joy.right.x * 60);  }
+  if (driveOwner === 'left')  { f = Math.round(joy.left.y * 100);  s = Math.round(joy.left.x * 100); }
+  if (driveOwner === 'right') { f = Math.round(joy.right.y * 100); r = Math.round(joy.right.x * 60); }
   send('D,' + nextSeq() + ',' + f + ',' + s + ',' + r);
 }
-function sendZero() { if (isConn()) send('D,' + nextSeq() + ',0,0,0'); }
+function sendZeroDrive() { if (isConnected()) send('D,' + nextSeq() + ',0,0,0'); }
 
-// ── joystick ──────────────────────────────────────────────────────────────────
-function setupJoy(ringId, knobId, side) {
-  var ring = document.getElementById(ringId);
-  var knob = document.getElementById(knobId);
-  var infoId = side === 'left' ? 'linfo' : 'rinfo';
-  var tid = null;
-
-  function rad() { return ring.clientWidth / 2; }
-
-  function move(cx, cy) {
-    var rc = ring.getBoundingClientRect();
-    var dx = cx - (rc.left + rc.width / 2);
-    var dy = cy - (rc.top  + rc.height / 2);
-    var dist = Math.sqrt(dx * dx + dy * dy);
-    var r = rad();
-    var sc = dist > r ? r / dist : 1;
-    var kx = dx * sc, ky = dy * sc;
-    knob.style.transform = 'translate(calc(-50% + ' + kx + 'px),calc(-50% + ' + ky + 'px))';
-    joy[side].x =  kx / r;
-    joy[side].y = -ky / r;
-    updateInfo(infoId, side);
-  }
-
-  function release() {
-    tid = null;
-    joy[side].x = joy[side].y = 0;
-    joy[side].touched = false;
-    knob.style.transform = 'translate(-50%,-50%)';
-    ring.classList.remove('active');
-    updateInfo(infoId, side);
-    onRelease(side);
-  }
-
-  ring.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    if (tid !== null) return;
-    if (side === 'left' && ctrlMode !== 'strafe') return;
-    var t = e.changedTouches[0];
-    tid = t.identifier;
-    joy[side].touched = true;
-    ring.classList.add('active');
-    move(t.clientX, t.clientY);
-    onTouch(side);
-  }, { passive: false });
-
-  ring.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    for (var i = 0; i < e.changedTouches.length; i++) {
-      var t = e.changedTouches[i];
-      if (t.identifier === tid) { move(t.clientX, t.clientY); break; }
-    }
-  }, { passive: false });
-
-  ring.addEventListener('touchend', function(e) {
-    for (var i = 0; i < e.changedTouches.length; i++) {
-      if (e.changedTouches[i].identifier === tid) { release(); break; }
-    }
-  }, { passive: false });
-
-  ring.addEventListener('touchcancel', function(e) {
-    for (var i = 0; i < e.changedTouches.length; i++) {
-      if (e.changedTouches[i].identifier === tid) { release(); break; }
-    }
-  }, { passive: false });
-
-  // Mouse fallback for desktop testing
-  var md = false;
-  ring.addEventListener('mousedown', function(e) {
-    if (side === 'left' && ctrlMode !== 'strafe') return;
-    md = true;
-    joy[side].touched = true;
-    ring.classList.add('active');
-    move(e.clientX, e.clientY);
-    onTouch(side);
-  });
-  window.addEventListener('mousemove', function(e) { if (md) move(e.clientX, e.clientY); });
-  window.addEventListener('mouseup', function() { if (md) { md = false; release(); } });
+function onJoyTouch(side) {
+  if (driveOwner === null) { driveOwner = side; stopHeartbeat(); startDriveLoop(); }
 }
-
-function updateInfo(id, side) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  var j = joy[side];
-  el.textContent = side === 'left'
-    ? 'f:' + Math.round(j.y * 100) + ' s:' + Math.round(j.x * 100)
-    : 'f:' + Math.round(j.y * 100) + ' r:' + Math.round(j.x * 60);
-}
-
-function onTouch(side) {
-  if (driveOwner === null) {
-    driveOwner = side;
-    stopHeartbeat();
-    startDriveLoop();
-  }
-}
-
-function onRelease(side) {
+function onJoyRelease(side) {
   if (driveOwner !== side) return;
-  stopDriveLoop();
-  driveOwner = null;
+  stopDriveLoop(); driveOwner = null;
   send('D,' + nextSeq() + ',0,0,0');
   var other = side === 'left' ? 'right' : 'left';
-  if (joy[other].touched) {
-    driveOwner = other;
-    startDriveLoop();
-  } else {
-    startHeartbeat();
+  if (joy[other].touched) { driveOwner = other; startDriveLoop(); }
+  else startHeartbeat();
+}
+
+/* HTTP transport removed — using WebSocket */
+
+/* ════════════════════════════════════
+   LOG
+════════════════════════════════════ */
+function logIt(label, endpoint) {
+  /* log bar removed; silently swallow log calls */
+}
+
+/* ════════════════════════════════════
+   SCREEN SWITCHING
+════════════════════════════════════ */
+function switchScreen(s) {
+  document.getElementById('screen-ctrl').classList.toggle('active', s === 'ctrl');
+  document.getElementById('screen-show').classList.toggle('active', s === 'show');
+  document.getElementById('stab-ctrl').className = 'stab ' + (s === 'ctrl' ? 'on-ctrl' : 'off');
+  document.getElementById('stab-show').className = 'stab ' + (s === 'show' ? 'on-show' : 'off');
+  const title = document.getElementById('tb-title');
+  title.className = s === 'show' ? 'show' : 'ctrl';
+  const mg = document.getElementById('mode-group');
+  const sep = mg ? mg.previousElementSibling : null;
+  if (mg) mg.style.display = s === 'ctrl' ? 'flex' : 'none';
+  if (sep && sep.classList.contains('tb-sep')) sep.style.display = s === 'ctrl' ? 'block' : 'none';
+  if (s === 'ctrl') { stopMove(); resizeCanvases(); }
+  if (s === 'show') { stopDriveJS(); setTimeout(resizeShowCards, 50); }
+}
+
+/* ════════════════════════════════════
+   LEFT TABS
+════════════════════════════════════ */
+function showLeftTab(t) {
+  document.getElementById('panel-strafe').style.display  = t === 'strafe'  ? 'flex' : 'none';
+  document.getElementById('panel-armjoy').className       = t === 'armjoy'  ? 'show' : '';
+  document.getElementById('mtab-strafe').className  = 'mtab ' + (t === 'strafe'  ? 'on-strafe'  : 'off');
+  document.getElementById('mtab-armjoy').className  = 'mtab ' + (t === 'armjoy'  ? 'on-armjoy'  : 'off');
+  if (t === 'strafe') setTimeout(resizeCanvases, 20);
+  if (t === 'armjoy') { setTimeout(resizeArmJoy, 20); initGripperSlider(); }
+}
+showLeftTab('strafe');
+
+/* ════════════════════════════════════
+   CANVAS SIZING
+════════════════════════════════════ */
+function resizeCanvases() {
+  const topbar = document.getElementById('topbar');
+  if (!topbar) return;
+
+  /* Use window dimensions directly — always correct immediately after
+     orientation/fullscreen change, unlike getBoundingClientRect()
+     which can return stale values before layout reflows.           */
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+
+  /* Topbar height — this element is always visible so its rect is reliable */
+  const topH   = topbar.offsetHeight;
+
+  /* Available height for canvas */
+  const availH = H - topH - 12;
+
+  /* Each panel is flex:1 in a row with a 1px divider.
+     Panel padding is clamp(4px,.8vh,8px) on each side = ~12px total.
+     Left panel also has its own inner content padding. */
+  const panelW = Math.floor((W - 1) / 2) - 14;
+
+  /* Canvas size = fit both width and height constraints */
+  const sz = Math.max(60, Math.min(panelW, availH));
+
+  ['cvStrafe', 'cvDrive'].forEach(id => {
+    const cv = document.getElementById(id);
+    if (cv) { cv.width = sz; cv.height = sz; }
+  });
+
+  drawStrafe(document.getElementById('cvStrafe'), 0, 0, null, 0);
+  drawDrive(document.getElementById('cvDrive'),   0, 0, 0);
+}
+
+function resizeShowCards() {
+  const grid = document.getElementById('moveGrid');
+  if (!grid) return;
+  const cols = 5;
+  const gap  = 6;
+  const padH = 20;
+  const cardW = (grid.clientWidth - padH - gap * (cols - 1)) / cols;
+  const cardH = grid.clientHeight - 4;
+  const cvW   = Math.max(30, Math.floor(cardW - 12));
+  const cvH   = Math.max(20, Math.min(44, Math.floor(cardH * 0.35)));
+  document.querySelectorAll('.mc-canvas').forEach(cv => { cv.width = cvW; cv.height = cvH; });
+}
+
+/* ── Resize everything after layout settles ── */
+function resizeAll() {
+  resizeCanvases();
+  resizeShowCards();
+  if (document.getElementById('panel-armjoy') &&
+      document.getElementById('panel-armjoy').classList.contains('show')) {
+    resizeArmJoy();
   }
 }
 
-// ── arm sliders ───────────────────────────────────────────────────────────────
-function onServo(axis, el) {
-  var v = parseInt(el.value);
-  armInit[axis] = true;
-  document.getElementById(axis + '-val').textContent = v + '°';
-  sendArm();
+window.addEventListener('resize', () => resizeAll());
+/* visualViewport fires on mobile when browser chrome shows/hides */
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => resizeAll());
 }
 
-function sendArm() {
-  var b = armInit.base ? clampServo('base', parseInt(document.getElementById('base-slider').value)) : -1;
-  var a = armInit.arm  ? clampServo('arm',  parseInt(document.getElementById('arm-slider').value))  : -1;
-  var c = armInit.claw ? clampServo('claw', parseInt(document.getElementById('claw-slider').value)) : -1;
+/* ════════════════════════════════════
+   JOYSTICK CONSTANTS
+════════════════════════════════════ */
+const DEAD = 0.44, EXPO = 1.75;
+function expo(v) { return Math.sign(v) * Math.pow(Math.abs(v), EXPO); }
+function d2r(d)  { return d * Math.PI / 180; }
+function lpx(midDeg, r, inset, cx, cy) {
+  const a = d2r(midDeg);
+  return { x: cx + Math.cos(a) * (r - inset), y: cy + Math.sin(a) * (r - inset) };
+}
+
+/* ════════════════════════════════════
+   STRAFE SECTORS
+════════════════════════════════════ */
+const SEGS = [
+  /* Order matches BOUND slots: -157.5→-112.5, -112.5→-67.5, ... each 45° */
+  { mid: -135, hw: 22, label: 'DIAG', line2: 'FL',    col: '#00d4cc', spin: false, cmd: 'strafe_diag_fl' },
+  { mid:  -90, hw: 44, label: 'FWD',  line2: null,    col: '#00e5ff', spin: false, cmd: 'strafe_fwd' },
+  { mid:  -45, hw: 22, label: 'DIAG', line2: 'FR',    col: '#00d4cc', spin: false, cmd: 'strafe_diag_fr' },
+  { mid:    0, hw: 28, label: 'SPIN', line2: 'RIGHT', col: '#7c6af0', spin: true,  cmd: 'rotate_right' },
+  { mid:   45, hw: 22, label: 'DIAG', line2: 'BR',    col: '#00d4cc', spin: false, cmd: 'strafe_diag_br' },
+  { mid:   90, hw: 44, label: 'BACK', line2: null,    col: '#00e5ff', spin: false, cmd: 'strafe_back' },
+  { mid:  135, hw: 22, label: 'DIAG', line2: 'BL',    col: '#00d4cc', spin: false, cmd: 'strafe_diag_bl' },
+  { mid:  180, hw: 28, label: 'SPIN', line2: 'LEFT',  col: '#7c6af0', spin: true,  cmd: 'rotate_left' },
+];
+
+function getSeg(angleDeg) {
+  /* Match exactly the BOUND slots used in drawStrafe:
+     slot i covers -157.5 + i*45 to -157.5 + (i+1)*45
+     Normalise angleDeg into -157.5..202.5 then find slot */
+  let a = angleDeg;
+  while (a < -157.5) a += 360;
+  while (a >= 202.5) a -= 360;
+  const slot = Math.floor((a + 157.5) / 45);
+  return Math.max(0, Math.min(7, slot));
+}
+
+/* ════════════════════════════════════
+   DRAW STRAFE JOYSTICK
+════════════════════════════════════ */
+function drawStrafe(cv, tx, ty, locked, frac) {
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const R = Math.min(W, H) / 2 - 3;
+  const cx = W / 2, cy = H / 2;
+  ctx.clearRect(0, 0, W, H);
+
+  const isL = (locked !== null);
+
+  /* Boundary angles — 8 equal 45° slices tiling perfectly, zero gaps */
+  /* Boundaries at: -157.5, -112.5, -67.5, -22.5, 22.5, 67.5, 112.5, 157.5 */
+  /* i.e. every 45° starting at -157.5 */
+  const BOUND = [];
+  for (let i = 0; i < 8; i++) BOUND.push(d2r(-157.5 + i * 45));
+
+  for (let i = 0; i < SEGS.length; i++) {
+    const s   = SEGS[i];
+    const a0  = BOUND[i];
+    const a1  = BOUND[(i + 1) % 8];
+    const isA = (locked === i);
+
+    /* ── SOLID FILLED PIE SLICE — no dividing lines ── */
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, a0, a1);
+    ctx.closePath();
+
+    if (!isL) {
+      ctx.fillStyle = s.col + '40';   /* idle: solid enough to clearly see */
+    } else if (isA) {
+      ctx.fillStyle = s.col + '88';   /* active: vivid */
+    } else {
+      ctx.fillStyle = s.col + '0a';   /* others: very faded */
+    }
+    ctx.fill();
+
+    /* ── THIN BORDER between slices — just enough to separate them ── */
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, a0, a1);
+    ctx.closePath();
+    ctx.strokeStyle = '#000000aa';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    /* ── SPEED ARC when active ── */
+    if (isA && frac > DEAD) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * Math.min(frac, 0.94), a0, a1);
+      ctx.strokeStyle = s.col + 'cc';
+      ctx.lineWidth = Math.max(10, R * 0.1);
+      ctx.lineCap = 'round'; ctx.stroke();
+      ctx.lineWidth = 1; ctx.lineCap = 'butt';
+    }
+
+    /* ── LABEL — centred at 62% radius inside the slice ── */
+    const textR = R * 0.62;
+    const lx = cx + Math.cos(d2r(s.mid)) * textR;
+    const ly = cy + Math.sin(d2r(s.mid)) * textR;
+
+    ctx.globalAlpha = (!isL || isA) ? 1 : 0.25;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    /* text colour: dark on bright idle, white on active */
+    if (!isL) {
+      ctx.fillStyle = '#ffffff';
+    } else if (isA) {
+      ctx.fillStyle = '#ffffff';
+    } else {
+      ctx.fillStyle = '#888';
+    }
+
+    const fs = Math.max(7, R * 0.1);
+    ctx.font = `bold ${fs}px "Share Tech Mono",monospace`;
+    ctx.fillText(s.label, lx, ly - (s.line2 ? fs * 0.6 : 0));
+    if (s.line2) ctx.fillText(s.line2, lx, ly + fs * 0.65);
+    ctx.globalAlpha = 1;
+  }
+
+  /* ── DEAD ZONE — drawn on top to cleanly cover the slice centres ── */
+  const dr = R * DEAD;
+  ctx.beginPath(); ctx.arc(cx, cy, dr, 0, Math.PI * 2);
+  ctx.fillStyle = '#0c0e16'; ctx.fill();
+  ctx.strokeStyle = '#00e5ff77'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  /* ── THUMB ── */
+  const tSize = Math.max(14, R * 0.17);
+  if (tx !== 0 || ty !== 0) {
+    const col = isL ? (SEGS[locked].spin ? '#7c6af0' : '#00e5ff') : '#00e5ff';
+    ctx.beginPath(); ctx.arc(cx + tx, cy + ty, tSize, 0, Math.PI * 2);
+    ctx.fillStyle = col + 'ee'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + tx, cy + ty, tSize * 1.45, 0, Math.PI * 2);
+    ctx.strokeStyle = col + '55'; ctx.lineWidth = tSize * 0.4; ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(cx, cy, tSize * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#00e5ff88'; ctx.fill();
+  }
+}
+
+/* ════════════════════════════════════
+   DRAW DRIVE JOYSTICK
+════════════════════════════════════ */
+const DQUADS = [
+  { mid: -90, hw: 50, label: 'FWD',  line2: null,    col: '#00e5ff' },
+  { mid:   0, hw: 40, label: 'TURN', line2: 'RIGHT', col: '#00ccbb' },
+  { mid:  90, hw: 50, label: 'BACK', line2: null,    col: '#00e5ff' },
+  { mid: 180, hw: 40, label: 'TURN', line2: 'LEFT',  col: '#00ccbb' },
+];
+
+const DRIVE_DEAD = 0.30; /* slightly smaller than strafe dead zone (0.44) */
+
+function drawDrive(cv, tx, ty, frac) {
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const R = Math.min(W, H) / 2 - 4;
+  const cx = W / 2, cy = H / 2;
+  ctx.clearRect(0, 0, W, H);
+
+  /* ── QUAD SECTOR FILLS ── */
+  for (const q of DQUADS) {
+    const a0 = d2r(q.mid - q.hw), a1 = d2r(q.mid + q.hw);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a1); ctx.closePath();
+    ctx.fillStyle = q.col + '18'; ctx.fill();
+    /* single dividing line per quad boundary */
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R);
+    ctx.strokeStyle = q.col + '30'; ctx.lineWidth = 1; ctx.stroke();
+    /* label near edge */
+    const lp = lpx(q.mid, R, R * 0.13, cx, cy);
+    const fs = Math.max(7, R * 0.085);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#7be8ff';
+    ctx.font = `bold ${fs}px "Share Tech Mono",monospace`;
+    ctx.fillText(q.label, lp.x, lp.y - (q.line2 ? fs * 0.55 : 0));
+    if (q.line2) ctx.fillText(q.line2, lp.x, lp.y + fs * 0.6);
+  }
+
+  /* ── OUTER RING ── */
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = '#00e5ff28'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  /* ── DIRECTIONAL ARROW — starts just beyond the thumb, points outward ── */
+  if ((tx !== 0 || ty !== 0) && frac > DRIVE_DEAD) {
+    const angle  = Math.atan2(ty, tx);
+    const speed  = Math.min(frac, 1.0);
+    const tSize  = Math.max(14, R * 0.18);          /* thumb radius */
+
+    /* arrow starts just past the thumb edge, extends toward/past rim */
+    const startR = Math.min(frac * R, R) - tSize * 0.5;
+    const endR   = R - 3;                            /* stay inside circle edge */
+
+    /* clip to canvas bounds */
+    const ax = cx + Math.cos(angle) * startR;
+    const ay = cy + Math.sin(angle) * startR;
+    const bx = cx + Math.cos(angle) * endR;
+    const by = cy + Math.sin(angle) * endR;
+
+    const alpha = 0.55 + speed * 0.45;
+    const arrowWidth = Math.max(3, R * 0.05) * (0.6 + speed * 0.4);
+
+    /* shaft */
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+    ctx.strokeStyle = `rgba(0,229,255,${alpha})`;
+    ctx.lineWidth = arrowWidth;
+    ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+
+    /* arrowhead triangle at tip */
+    const headSize = Math.max(10, R * 0.14);
+    const lx = bx - Math.cos(angle - 0.38) * headSize;
+    const ly = by - Math.sin(angle - 0.38) * headSize;
+    const rx = bx - Math.cos(angle + 0.38) * headSize;
+    const ry = by - Math.sin(angle + 0.38) * headSize;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(lx, ly);
+    ctx.lineTo(rx, ry);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(0,229,255,${alpha})`;
+    ctx.fill();
+  }
+
+  /* ── DEAD ZONE ── */
+  const dr = R * DRIVE_DEAD;
+  ctx.beginPath(); ctx.arc(cx, cy, dr, 0, Math.PI * 2);
+  ctx.fillStyle = '#0c0e16'; ctx.fill();
+  ctx.strokeStyle = '#00e5ff66'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  /* ── THUMB ── */
+  const tSize = Math.max(14, R * 0.18);
+  if (tx !== 0 || ty !== 0) {
+    const col = frac > DRIVE_DEAD ? '#00e5ff' : '#00e5ff55';
+    ctx.beginPath(); ctx.arc(cx + tx, cy + ty, tSize, 0, Math.PI * 2);
+    ctx.fillStyle = col + 'cc'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + tx, cy + ty, tSize * 1.4, 0, Math.PI * 2);
+    ctx.strokeStyle = col + '40'; ctx.lineWidth = tSize * 0.35; ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(cx, cy, tSize * 0.45, 0, Math.PI * 2);
+    ctx.fillStyle = '#00e5ff66'; ctx.fill();
+  }
+}
+
+/* ════════════════════════════════════
+   JOYSTICK INTERACTION
+════════════════════════════════════ */
+function makeJoystick(cvId, isStrafe) {
+  const cv = document.getElementById(cvId);
+  let active = false, ocx = 0, ocy = 0, locked = null, tx = 0, ty = 0;
+  const JOY_SIDE = isStrafe ? 'left' : 'right';
+
+  function getCenter() {
+    const r = cv.getBoundingClientRect();
+    ocx = r.left + r.width / 2;
+    ocy = r.top  + r.height / 2;
+  }
+
+  function getR() {
+    return Math.min(cv.width, cv.height) / 2 - 4;
+  }
+
+  /* Update normalized joy position — drive loop reads these */
+  function joyMove(nx, ny) {
+    joy[JOY_SIDE].x = nx; joy[JOY_SIDE].y = ny;
+  }
+  /* Release joy side and notify arbitration */
+  function joyRelease() {
+    joy[JOY_SIDE].x = 0; joy[JOY_SIDE].y = 0; joy[JOY_SIDE].touched = false;
+    onJoyRelease(JOY_SIDE);
+  }
+
+  function update(px, py) {
+    const R = getR();
+    const dx = px - ocx, dy = py - ocy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const frac = dist / R;
+    const inDead = isStrafe ? frac < DEAD : frac < DRIVE_DEAD;
+    const cx = cv.width / 2, cy = cv.height / 2;
+
+    if (inDead) {
+      tx = 0; ty = 0;
+      if (isStrafe) {
+        locked = null;
+        drawStrafe(cv, 0, 0, null, 0);
+        joyMove(0, 0);
+      } else {
+        drawDrive(cv, 0, 0, 0);
+        joyMove(0, 0);
+      }
+      return;
+    }
+
+    const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    if (isStrafe) {
+      if (locked === null) locked = getSeg(angleDeg);
+      const seg = SEGS[locked];
+      const midR = d2r(seg.mid), hwR = d2r(seg.hw);
+      let ta = d2r(angleDeg);
+      let diff = ta - midR;
+      while (diff >  Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      diff = Math.max(-hwR, Math.min(hwR, diff));
+      ta = midR + diff;
+      const cr = Math.min(dist, R);
+      tx = Math.cos(ta) * cr; ty = Math.sin(ta) * cr;
+      drawStrafe(cv, tx, ty, locked, cr / R);
+      /* Store normalized left-joy position for sendDrive() */
+      joyMove(tx / R, -ty / R);
+    } else {
+      const cr = Math.min(dist, R);
+      tx = dx / dist * cr; ty = dy / dist * cr;
+      drawDrive(cv, tx, ty, cr / R);
+      /* Store expo-curved right-joy position for sendDrive() */
+      joyMove(expo(tx / R), expo(-ty / R));
+    }
+  }
+
+  function reset() {
+    active = false; tx = 0; ty = 0; locked = null;
+    joyRelease();
+    if (isStrafe) drawStrafe(cv, 0, 0, null, 0);
+    else          drawDrive(cv, 0, 0, 0);
+  }
+
+  cv.addEventListener('mousedown', function(e) {
+    active = true; getCenter();
+    joy[JOY_SIDE].touched = true; onJoyTouch(JOY_SIDE);
+    update(e.clientX, e.clientY); e.preventDefault();
+  });
+  cv.addEventListener('touchstart', function(e) {
+    active = true; getCenter();
+    joy[JOY_SIDE].touched = true; onJoyTouch(JOY_SIDE);
+    update(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('mousemove',   e => { if (active) update(e.clientX, e.clientY); });
+  document.addEventListener('touchmove',   e => { if (active) update(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+  document.addEventListener('mouseup',     () => { if (active) reset(); });
+  document.addEventListener('touchend',    () => { if (active) reset(); });
+  document.addEventListener('touchcancel', () => { if (active) reset(); });
+}
+
+function stopDriveJS() {
+  stopHeartbeat(); stopDriveLoop();
+  driveOwner = null;
+  joy.left.x = 0; joy.left.y = 0; joy.left.touched = false;
+  joy.right.x = 0; joy.right.y = 0; joy.right.touched = false;
+  if (isConnected()) send('D,' + nextSeq() + ',0,0,0');
+}
+
+/* ════════════════════════════════════
+   SLIDERS
+════════════════════════════════════ */
+
+
+/* ════════════════════════════════════
+   RESET BUTTON
+════════════════════════════════════ */
+
+/* ════════════════════════════════════
+   SHOW OFF MOVES
+════════════════════════════════════ */
+const MOVEINFO = [
+  { name: 'PIROUETTE',   desc: 'All 4 wheels opposing · spins on its own axis',             cmd: 'show_spin' },
+  { name: 'MOONWALK',    desc: 'Pure lateral strafe · slides sideways while facing fwd',    cmd: 'show_moonwalk' },
+  { name: 'ORBIT',       desc: 'Circles a point while body always faces one direction',      cmd: 'show_orbit' },
+  { name: 'REAR PIVOT',  desc: 'Rear wheels locked · front wheels arc around rear axle',    cmd: 'show_rear_pivot' },
+  { name: 'PLANET',      desc: 'Orbits a point while body counter-rotates · stays facing fwd', cmd: 'show_planet' },
+  { name: 'FIGURE-8',    desc: 'Smooth looping S-path with left/right arc switches',        cmd: 'show_figure8' },
+  { name: 'WIGGLE',      desc: 'Rapid alternating left-right strafe dance',                 cmd: 'show_wiggle' },
+  { name: 'TWIRL',       desc: 'Forward drive + continuous spin · outward spiral path',     cmd: 'show_twirl' },
+  { name: 'CRAB DASH',   desc: 'Full-speed diagonal sprint · unique to mecanum wheels',     cmd: 'show_crab_dash' },
+  { name: 'TANK DRIFT',  desc: 'One corner wheel locked · robot pivots dramatically',       cmd: 'show_tank_drift' },
+];
+
+/* Canonical move IDs match firmware show_moves.py */
+const MOVE_IDS = ['spin','moonwalk','orbit','rear_pivot','planet','figure8','wiggle','twirl','crab_dash','tank_drift'];
+
+function selMove(id) {
+  if (activeMove === id) { stopMove(); return; }
+  stopMove();
+  activeMove = id;
+  document.querySelector('.move-card[data-id="' + id + '"]').classList.add('active');
+  if (isConnected()) send('M,' + nextSeq() + ',' + MOVE_IDS[id] + ',50');
+}
+
+function stopMove() {
+  if (activeMove !== null && isConnected()) send('STOP,' + nextSeq());
+  activeMove = null;
+  document.querySelectorAll('.move-card').forEach(function(c) { c.classList.remove('active'); });
+}
+
+/* ════════════════════════════════════
+   SHOW OFF ANIMATIONS
+════════════════════════════════════ */
+const afs = {};
+function sa(id, fn) {
+  let t = 0;
+  function lp() { afs[id] = requestAnimationFrame(lp); fn(t); t += 0.008; }
+  lp();
+}
+
+/* mini robot helper */
+function bot(ctx, x, y, a, s, col) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  const k = s || 1;
+  ctx.fillStyle = col || '#c87941';
+  ctx.beginPath(); ctx.roundRect(-8 * k, -6 * k, 16 * k, 12 * k, 2 * k); ctx.fill();
+  ctx.fillStyle = '#fff2'; ctx.beginPath(); ctx.arc(6 * k, 0, 1.5 * k, 0, Math.PI * 2); ctx.fill();
+  for (const [wx, wy] of [[-6*k,-8*k],[6*k,-8*k],[-6*k,6*k],[6*k,6*k]]) {
+    ctx.fillStyle = '#1a2a3a'; ctx.strokeStyle = '#00e5ff33'; ctx.lineWidth = 0.7;
+    ctx.beginPath(); ctx.roundRect(wx - 2.5*k, wy - 1.2*k, 5*k, 2.4*k, 0.8*k); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function getCC(id) {
+  const cv = document.getElementById('cv' + id);
+  return { cv, ctx: cv.getContext('2d'), W: cv.width, H: cv.height, cx: cv.width/2, cy: cv.height/2 };
+}
+function clr(id) { const c = getCC(id); if (c.W < 4 || c.H < 4) return null; c.ctx.clearRect(0, 0, c.W, c.H); return c; }
+
+sa(0, t => { const { cv, ctx, W, H, cx, cy } = clr(0); if (!cx) return; const r = Math.min(cx, cy) * 0.75; ctx.strokeStyle = '#7c6af055'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI*.8, Math.PI*.8); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI*.2, -Math.PI*.2); ctx.stroke(); ctx.fillStyle = '#d0c8ff'; ctx.beginPath(); ctx.arc(cx + r*Math.cos(Math.PI*.8+t*2), cy + r*Math.sin(Math.PI*.8+t*2), 4, 0, Math.PI*2); ctx.fill(); bot(ctx, cx, cy, t*3, Math.min(cx,cy)*0.05); });
+sa(1, t => { const { ctx, W, H, cx, cy } = clr(1); if (!cx) return; const amp = cx * 0.7; const x = cx + Math.sin(t) * amp; for (let i = 1; i <= 3; i++) { ctx.globalAlpha = .07*i; ctx.fillStyle = '#c87941'; ctx.beginPath(); ctx.arc(cx + Math.sin(t-i*.4)*amp, cy, cy*0.28, 0, Math.PI*2); ctx.fill(); } ctx.globalAlpha = 1; bot(ctx, x, cy, 0, Math.min(cx,cy)*0.05); });
+sa(2, t => {
+  const { ctx, cx, cy } = clr(2); if (!cx) return;
+  const r = Math.min(cx,cy)*0.52;
+  /* orbit centre slightly offset so it reads differently from Planet */
+  const ox = cx, oy = cy;
+  const rx = ox + r*Math.cos(t*1.6);
+  const ry = oy + r*Math.sin(t*1.6);
+  /* dashed orbit path */
+  ctx.beginPath(); ctx.arc(ox, oy, r, 0, Math.PI*2);
+  ctx.strokeStyle = '#00e5ff33'; ctx.lineWidth = 1;
+  ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+  /* direction arrow showing robot always faces same way (counter-rotate) */
+  const fixedAngle = 0; /* robot always faces right — constant */
+  /* faint heading indicator */
+  ctx.strokeStyle = '#00e5ff44'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(rx, ry);
+  ctx.lineTo(rx + Math.cos(fixedAngle)*8, ry + Math.sin(fixedAngle)*8);
+  ctx.stroke();
+  /* orbit centre dot — bright */
+  ctx.fillStyle = '#00eeff';
+  ctx.beginPath(); ctx.arc(ox, oy, 4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(ox, oy, 2, 0, Math.PI*2); ctx.fill();
+  /* robot counter-rotates to always face same direction */
+  bot(ctx, rx, ry, fixedAngle, Math.min(cx,cy)*0.045);
+});
+sa(3, t => { const { ctx, cx, cy } = clr(3); if (!cx) return; const px = cx*0.28, py = cy, r = Math.min(cx,cy)*0.48, a = t*1.5; ctx.beginPath(); ctx.arc(px, py, r, -Math.PI, Math.PI); ctx.strokeStyle = '#c8794155'; ctx.lineWidth = 1; ctx.stroke(); /* bright pivot dot */ ctx.fillStyle = '#00eeff'; ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2); ctx.fill(); bot(ctx, px+r*Math.cos(a), py+r*Math.sin(a), a+Math.PI/2, Math.min(cx,cy)*0.04); });
+sa(4, t => { const { ctx, cx, cy } = clr(4); if (!cx) return; const r = Math.min(cx,cy)*0.6; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.strokeStyle = '#7c6af025'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#7c6af066'; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2); ctx.fill(); bot(ctx, cx+r*Math.cos(t*2), cy+r*Math.sin(t*2), -t*2, Math.min(cx,cy)*0.05); });
+sa(5, t => { const { ctx, cx, cy } = clr(5); if (!cx) return; const rw = cx*0.75, rh = cy*0.6; ctx.beginPath(); for (let i=0;i<=80;i++){const tt=i/80*Math.PI*2; ctx.lineTo ? ctx.lineTo(cx+rw*Math.sin(tt), cy+rh*Math.sin(tt*2)/2) : ctx.moveTo(cx+rw*Math.sin(tt), cy+rh*Math.sin(tt*2)/2);} ctx.strokeStyle = '#c8794128'; ctx.lineWidth = 1; ctx.stroke(); const tt=(t*1.4)%(Math.PI*2),px=cx+rw*Math.sin(tt),py=cy+rh*Math.sin(tt*2)/2; const dx=rw*1.4*Math.cos(tt),dy=rh*2.8*Math.cos(tt*2)/2; bot(ctx,px,py,Math.atan2(dy,dx),Math.min(cx,cy)*0.05); });
+sa(6, t => { const { ctx, cx, cy } = clr(6); if (!cx) return; const amp = cx*0.5; const x = cx+Math.sin(t*5)*amp; for(let i=1;i<=3;i++){ctx.globalAlpha=.08*i;ctx.fillStyle='#c87941';ctx.beginPath();ctx.arc(cx+Math.sin(t*5-i*.3)*amp,cy,cy*0.28,0,Math.PI*2);ctx.fill();} ctx.globalAlpha=1; bot(ctx,x,cy,0,Math.min(cx,cy)*0.05); });
+sa(7, t => { const { ctx, cx, cy } = clr(7); if (!cx) return; const maxR=Math.min(cx,cy)*0.7; ctx.beginPath(); for(let i=0;i<=60;i++){const tt=i/60*Math.PI*4,rr=Math.min(tt/2,maxR);ctx.lineTo ? ctx.lineTo(cx+rr*Math.cos(tt),cy+rr*Math.sin(tt)*.6) : ctx.moveTo(cx+rr*Math.cos(tt),cy+rr*Math.sin(tt)*.6);} ctx.strokeStyle='#c8794125';ctx.lineWidth=1;ctx.stroke(); const tt=(t*1.2)%(Math.PI*4),rr=Math.min(tt/2,maxR); bot(ctx,cx+rr*Math.cos(tt),cy+rr*Math.sin(tt)*.6,t*3,Math.min(cx,cy)*0.05); });
+sa(8, t => {
+  /* Crab Dash: body faces FORWARD (0°) while moving diagonally bottom-left → top-right */
+  const { ctx, cx, cy } = clr(8); if (!cx) return;
+  const ph = (t * 1.4) % 1;
+  /* diagonal path: from bottom-left to top-right, fully inside canvas */
+  const x0 = cx*0.15, y0 = cy*1.75, x1 = cx*1.85, y1 = cy*0.25;
+  const sx = x0 + ph*(x1-x0), sy = y0 + ph*(y1-y0);
+  /* diagonal direction arrow line */
+  ctx.strokeStyle = '#00e5ff55'; ctx.lineWidth = 1;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  ctx.setLineDash([]);
+  /* arrowhead at top-right end */
+  ctx.fillStyle = '#00e5ffaa';
+  ctx.beginPath(); ctx.moveTo(x1,y1);
+  ctx.lineTo(x1-8,y1+4); ctx.lineTo(x1-4,y1+8); ctx.closePath(); ctx.fill();
+  /* ghost trail — fading copies behind robot, body also faces forward */
+  for (let i = 1; i <= 3; i++) {
+    const pp = Math.max(0, (t*1.4 - i*0.25) % 1);
+    const gx = x0+pp*(x1-x0), gy = y0+pp*(y1-y0);
+    ctx.globalAlpha = 0.08 * (4-i);
+    ctx.fillStyle = '#c87941';
+    ctx.beginPath(); ctx.arc(gx, gy, cy*0.22, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  /* robot body faces FORWARD (angle=0) — key point of crab dash */
+  bot(ctx, sx, sy, 0, Math.min(cx,cy)*0.05);
+});
+sa(9, t => { const { ctx, cx, cy } = clr(9); if (!cx) return; const px=cx*1.5,py=cy*1.3,r=Math.min(cx,cy)*0.8,a=t*1.6; ctx.beginPath();ctx.arc(px,py,r,-Math.PI,.2);ctx.strokeStyle='#c8794128';ctx.lineWidth=1;ctx.stroke(); ctx.fillStyle='#ff6060';ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill(); ctx.fillStyle='#ff606044';ctx.beginPath();ctx.arc(px,py,9,0,Math.PI*2);ctx.fill(); bot(ctx,px+r*Math.cos(Math.PI+a*.6),py+r*Math.sin(Math.PI+a*.6)*.75,Math.PI+a*.6+Math.PI/2,Math.min(cx,cy)*0.05); });
+
+/* ════════════════════════════════════
+   FULLSCREEN HELPERS
+════════════════════════════════════ */
+const FS_ENTER = 'M3 3h5v2H5v3H3V3zm13 0h5v5h-2V5h-3V3zM3 16h2v3h3v2H3v-5zm16 3h-3v2h5v-5h-2v3z';
+const FS_EXIT  = 'M5 16H3v5h5v-2H5v-3zm-2-8h2V5h3V3H3v5zm14 11h-3v2h5v-5h-2v3zM14 3v2h3v3h2V3h-5z';
+
+function setFsDebug(msg, level = 'warn') { return; }
+
+function getFsElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function updateFsIcon() {
+  const inFs = !!getFsElement();
+  document.getElementById('fsPath').setAttribute('d', inFs ? FS_EXIT : FS_ENTER);
+  document.getElementById('fsBtn').title = inFs ? 'Exit fullscreen' : 'Enter fullscreen';
+  if (inFs) {
+    setFsDebug(
+      'FS: entered\nUA: ' + navigator.userAgent,
+      'ok'
+    );
+  }
+}
+
+async function requestAppFullscreen(sourceLabel) {
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!req) {
+    setFsDebug(`FS: API not available\nSource: ${sourceLabel}`, 'err');
+    return false;
+  }
+
+  try {
+    const result = req.call(el, { navigationUI: 'hide' });
+    if (result && typeof result.then === 'function') await result;
+    setFsDebug(`FS: request sent\nSource: ${sourceLabel}`, 'warn');
+    return true;
+  } catch (err) {
+    setFsDebug(
+      `FS: request failed\nSource: ${sourceLabel}\n${(err && err.name ? err.name : 'UnknownError')}: ${(err && err.message ? err.message : 'no message')}`,
+      'err'
+    );
+    return false;
+  }
+}
+
+/* Called by the topbar button — always a direct user gesture */
+function toggleFullscreen() {
+  const inFs = !!getFsElement();
+  if (!inFs) {
+    requestAppFullscreen('top button');
+  } else {
+    const ex = document.exitFullscreen || document.webkitExitFullscreen;
+    if (ex) {
+      try {
+        const result = ex.call(document);
+        if (result && typeof result.catch === 'function') result.catch(() => {});
+      } catch (_) {}
+    }
+  }
+}
+
+/* Re-lock landscape whenever fullscreen is entered or phone is rotated */
+function lockLandscape() {
+  if (!screen.orientation || !screen.orientation.lock) return;
+  screen.orientation.lock('landscape').catch(() => {});
+}
+
+/* Re-lock on every orientationchange while in fullscreen */
+window.addEventListener('orientationchange', () => {
+  /* Lock landscape and resize — use longer delay so DOM reflows first */
+  setTimeout(() => {
+    if (getFsElement()) lockLandscape();
+    resizeAll();
+    /* second pass after full reflow */
+    setTimeout(resizeAll, 300);
+  }, 150);
+});
+
+/* Re-lock whenever fullscreen is entered */
+document.addEventListener('fullscreenchange', () => {
+  updateFsIcon();
+  if (getFsElement()) lockLandscape();
+  /* Resize after fullscreen transition — DOM needs time to reflow */
+  setTimeout(resizeAll, 350);
+  const inFs = !!getFsElement();
+  if (!inFs) {
+    setFsDebug('FS: browser left fullscreen\nThis often happens in a normal Chrome tab on Android.', 'warn');
+  }
+});
+document.addEventListener('webkitfullscreenchange', () => { updateFsIcon(); setTimeout(resizeAll, 350); });
+document.addEventListener('fullscreenerror', e => {
+  setFsDebug('FS: fullscreenerror\n' + (e && e.type ? e.type : 'event'), 'err');
+});
+document.addEventListener('webkitfullscreenerror', e => {
+  setFsDebug('FS: webkitfullscreenerror\n' + (e && e.type ? e.type : 'event'), 'err');
+});
+
+/* ════════════════════════════════════
+   SPLASH TAP — this IS the user gesture.
+   requestFullscreen() is called synchronously
+   inside the event handler with zero indirection.
+   This is the ONLY reliable way on Android Chrome.
+════════════════════════════════════ */
+let splashDone = false;
+async function splashTap(ev) {
+  if (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+  if (splashDone) return;
+  splashDone = true;
+
+  /* Request fullscreen from the direct pointer gesture */
+  await requestAppFullscreen('splash tap');
+
+  /* Lock orientation */
+  lockLandscape();
+
+  /* Hide splash, show app */
+  const splash = document.getElementById('splash');
+  splash.style.transition = 'opacity .35s';
+  splash.style.opacity    = '0';
+  setTimeout(() => {
+    splash.style.display = 'none';
+    const app = document.getElementById('app');
+    app.style.display       = 'flex';
+    app.style.flexDirection = 'column';
+    resizeCanvases();
+    makeJoystick('cvStrafe', true);
+    makeJoystick('cvDrive',  false);
+    setTimeout(resizeShowCards, 120);
+  }, 360);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const splash = document.getElementById('splash');
+  if (splash) {
+    splash.addEventListener('pointerup', splashTap, { passive: false });
+    splash.addEventListener('touchend',  splashTap, { passive: false });
+    splash.addEventListener('click',     splashTap, { passive: false });
+  }
+  updateFsIcon();
+  connect();
+});
+
+
+/* Exit fullscreen handled by topbar fsBtn (toggleFullscreen) */
+
+/* ════════════════════════════════════
+   PWA MANIFEST (blob-injected so single
+   HTML file still qualifies as installable)
+════════════════════════════════════ */
+(function injectManifest() {
+  const manifest = {
+    name: 'JoyControl v2 · PicoBot',
+    short_name: 'JoyControl',
+    description: 'Mecanum robot controller — mecanum wheels, dual joystick, show-off mode',
+    start_url: './',
+    display: 'fullscreen',
+    orientation: 'landscape',
+    background_color: '#080a0e',
+    theme_color: '#080a0e',
+    icons: [{
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23080a0e'/%3E%3Ccircle cx='256' cy='256' r='190' fill='none' stroke='%2300e5ff' stroke-width='22'/%3E%3Ccircle cx='256' cy='256' r='58' fill='%2300e5ff'/%3E%3Cline x1='256' y1='66' x2='256' y2='446' stroke='%2300e5ff22' stroke-width='2'/%3E%3Cline x1='66' y1='256' x2='446' y2='256' stroke='%2300e5ff22' stroke-width='2'/%3E%3C/svg%3E",
+      sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable'
+    }]
+  };
+  try {
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+  } catch(e) {}
+})();
+
+
+
+
+
+/* ════════════════════════════════════
+   ARM JOY PANEL
+════════════════════════════════════ */
+const AJ_DEAD = 0.30, AJ_EXPO = 1.6;
+let ajActive = false, ajOcx = 0, ajOcy = 0, ajTx = 0, ajTy = 0;
+let ajBase = 90, ajArm = 90;
+
+function expoAJ(v) { return Math.sign(v) * Math.pow(Math.abs(v), AJ_EXPO); }
+
+function resizeArmJoy() {
+  const topbar = document.getElementById('topbar');
+  if (!topbar) return;
+
+  const topH   = topbar.offsetHeight;
+  /* subtract: topbar + gripper row (~44px) + centre btn (~32px) + gaps (~24px) */
+  const availH = window.innerHeight - topH - 100;
+  /* panel is half screen width minus divider and padding */
+  const panelW = Math.floor((window.innerWidth - 1) / 2) - 14;
+
+  const cv = document.getElementById('cvArmJoy');
+  const sz = Math.max(60, Math.min(availH, panelW * 0.62));
+  if (cv) { cv.width = sz; cv.height = sz; drawArmJoy(cv, 0, 0, false, null); }
+}
+
+function drawArmJoy(cv, tx, ty, active, axisLock) {
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const R = Math.min(W, H) / 2 - 3;
+  const cx = W / 2, cy = H / 2;
+  ctx.clearRect(0, 0, W, H);
+  const frac = Math.sqrt(tx*tx + ty*ty) / R;
+  const inDead = frac < AJ_DEAD;
+
+  function d2r(d) { return d * Math.PI / 180; }
+
+  /* Quadrants: teal=arm up/down, purple=base left/right */
+  const quads = [
+    { a0:d2r(-135), a1:d2r(-45),  col:'#00e5ff', lbl:'RAISE', ldy:-0.88, axis:'arm'  },
+    { a0:d2r(45),   a1:d2r(135),  col:'#00e5ff', lbl:'LOWER', ldy:0.88,  axis:'arm'  },
+    { a0:d2r(-45),  a1:d2r(45),   col:'#7c6af0', lbl:'R →',   ldx:0.88,  axis:'base' },
+    { a0:d2r(135),  a1:d2r(225),  col:'#7c6af0', lbl:'← L',   ldx:-0.88, axis:'base' },
+  ];
+
+  for (const q of quads) {
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, q.a0, q.a1); ctx.closePath();
+    /* dim locked-out axis */
+    let fillAlpha = '22';
+    if (!inDead && active) {
+      if (!axisLock) fillAlpha = '44';
+      else if ((axisLock === 'base' && q.axis === 'base') ||
+               (axisLock === 'arm'  && q.axis === 'arm'))  fillAlpha = '66';
+      else fillAlpha = '0a'; /* other axis faded */
+    }
+    ctx.fillStyle = q.col + fillAlpha;
+    ctx.fill();
+    /* label near edge */
+    const lx = cx + (q.ldx || 0) * R * 0.88;
+    const ly = cy + (q.ldy || 0) * R * 0.88;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold ' + Math.max(7, R * 0.1) + 'px "Share Tech Mono",monospace';
+    ctx.fillText(q.lbl, lx, ly);
+  }
+
+  /* crosshair */
+  ctx.strokeStyle = '#00e5ff0a'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+
+  /* outer ring */
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = '#00e5ff22'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  /* dead zone */
+  const dr = R * AJ_DEAD;
+  ctx.beginPath(); ctx.arc(cx, cy, dr, 0, Math.PI * 2);
+  ctx.fillStyle = '#0f1520'; ctx.fill();
+  ctx.strokeStyle = '#00e5ff66'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  /* direction arrow outside thumb */
+  const tSize = Math.max(10, R * 0.17);
+  if (!inDead && active && (tx !== 0 || ty !== 0)) {
+    const angle = Math.atan2(ty, tx);
+    const speed = Math.min(frac, 1);
+    const startR = Math.min(frac * R, R) - tSize * 0.5;
+    const endR   = R - 3;
+    const ax = cx + Math.cos(angle) * startR, ay = cy + Math.sin(angle) * startR;
+    const bx = cx + Math.cos(angle) * endR,   by = cy + Math.sin(angle) * endR;
+    const col = Math.abs(ty) > Math.abs(tx) ? '#00e5ff' : '#7c6af0';
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+    ctx.strokeStyle = col + 'ee'; ctx.lineWidth = Math.max(2, R * 0.045);
+    ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+    const hs = Math.max(7, R * 0.12);
+    const lx = bx - Math.cos(angle - 0.38) * hs, ly = by - Math.sin(angle - 0.38) * hs;
+    const rx = bx - Math.cos(angle + 0.38) * hs, ry = by - Math.sin(angle + 0.38) * hs;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(lx, ly); ctx.lineTo(rx, ry);
+    ctx.closePath(); ctx.fillStyle = col + 'ff'; ctx.fill();
+  }
+
+  /* thumb */
+  if (tx !== 0 || ty !== 0) {
+    ctx.beginPath(); ctx.arc(cx + tx, cy + ty, tSize, 0, Math.PI * 2);
+    ctx.fillStyle = '#a09af0ee'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + tx, cy + ty, tSize * 1.4, 0, Math.PI * 2);
+    ctx.strokeStyle = '#7c6af055'; ctx.lineWidth = tSize * 0.35; ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(cx, cy, tSize * 0.45, 0, Math.PI * 2);
+    ctx.fillStyle = '#7c6af066'; ctx.fill();
+  }
+}
+
+/* 'arm' = up/down locked, 'base' = left/right locked, null = not yet decided */
+let ajAxisLock = null;
+/* Remembered positions — persist across releases */
+let ajBasePos = 90, ajArmPos = 90;
+/* Position at the moment thumb left dead zone this stroke */
+let ajBaseAtStrokeStart = 90, ajArmAtStrokeStart = 90;
+
+function updateArmJoy(px, py) {
+  const cv = document.getElementById('cvArmJoy');
+  const R  = Math.min(cv.width, cv.height) / 2 - 3;
+  const dx = px - ajOcx, dy = py - ajOcy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const frac = dist / R;
+  const inDead = frac < AJ_DEAD;
+
+  if (inDead) {
+    /* back in dead zone — reset lock but keep positions */
+    ajAxisLock = null;
+    ajTx = 0; ajTy = 0;
+    drawArmJoy(cv, 0, 0, false, null);
+    return;
+  }
+
+  const cr  = Math.min(dist, R);
+  const rawX = dx / dist * cr;
+  const rawY = dy / dist * cr;
+
+  /* Lock axis on first exit from dead zone this stroke */
+  if (ajAxisLock === null) {
+    ajAxisLock = Math.abs(dx) >= Math.abs(dy) ? 'base' : 'arm';
+    /* Snapshot position at stroke start so delta is relative to it */
+    ajBaseAtStrokeStart = ajBasePos;
+    ajArmAtStrokeStart  = ajArmPos;
+  }
+
+  /* Map joystick deflection as DELTA from position at stroke start.
+     Full deflection (±1.0 after expo) = ±90° change.
+     This means wherever the arm was, pushing fully right adds 90°,
+     pushing fully left subtracts 90°, and releasing remembers where it stopped. */
+  if (ajAxisLock === 'base') {
+    ajTx = rawX; ajTy = 0;
+    const delta = expoAJ(rawX / R) * 90;
+    ajBase = Math.round(ajBaseAtStrokeStart + delta);
+    ajBase = Math.max(0, Math.min(180, ajBase));
+    ajBasePos = ajBase;
+    document.getElementById('aj-base').textContent  = ajBase;
+    document.getElementById('aj-bfill').style.width = (ajBase / 180 * 100) + '%';
+    armInit.base = true; sendArmWS();
+  } else {
+    ajTx = 0; ajTy = rawY;
+    const delta = expoAJ(rawY / R) * 90;
+    ajArm = Math.round(ajArmAtStrokeStart - delta);
+    ajArm = Math.max(0, Math.min(180, ajArm));
+    ajArmPos = ajArm;
+    document.getElementById('aj-arm').textContent   = ajArm;
+    document.getElementById('aj-afill').style.width = (ajArm / 180 * 100) + '%';
+    armInit.arm = true; sendArmWS();
+  }
+
+  drawArmJoy(cv, ajTx, ajTy, true, ajAxisLock);
+}
+
+function resetArmJoy() {
+  ajActive = false; ajTx = 0; ajTy = 0; ajAxisLock = null;
+  const cv = document.getElementById('cvArmJoy');
+  if (cv) drawArmJoy(cv, 0, 0, false, null);
+}
+
+/* Attach events to arm joy canvas */
+function initArmJoyEvents() {
+  const cv = document.getElementById('cvArmJoy');
+  if (!cv) return;
+  cv.addEventListener('mousedown', e => {
+    ajActive = true;
+    const r = cv.getBoundingClientRect();
+    ajOcx = r.left + r.width / 2; ajOcy = r.top + r.height / 2;
+    updateArmJoy(e.clientX, e.clientY); e.preventDefault();
+  });
+  cv.addEventListener('touchstart', e => {
+    ajActive = true;
+    const r = cv.getBoundingClientRect();
+    ajOcx = r.left + r.width / 2; ajOcy = r.top + r.height / 2;
+    updateArmJoy(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('mousemove',   e => { if (ajActive) updateArmJoy(e.clientX, e.clientY); });
+  document.addEventListener('touchmove',   e => { if (ajActive) updateArmJoy(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+  document.addEventListener('mouseup',     () => { if (ajActive) resetArmJoy(); });
+  document.addEventListener('touchend',    () => { if (ajActive) resetArmJoy(); });
+  document.addEventListener('touchcancel', () => { if (ajActive) resetArmJoy(); });
+}
+
+/* Gripper slider — initialised lazily on first ARM JOY tab switch */
+let gripperSliderReady = false;
+function initGripperSlider() {
+  if (gripperSliderReady) return;
+  const wrap = document.getElementById('aj-gwrap');
+  const track = document.getElementById('aj-gtrack');
+  if (!wrap || !track) return;
+  gripperSliderReady = true;
+  let active = false;
+
+  function getVal(clientX) {
+    const r = track.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+  }
+  function apply(pct) {
+    const v = Math.round(pct * 180);
+    document.getElementById('aj-gfill').style.width = (pct * 100) + '%';
+    document.getElementById('aj-gthumb').style.left = (pct * 100) + '%';
+    document.getElementById('aj-gval').textContent  = v + '°';
+    ajClaw = v; armInit.claw = true; sendArmWS();
+  }
+
+  wrap.addEventListener('mousedown',  e => { active = true; apply(getVal(e.clientX)); e.preventDefault(); });
+  wrap.addEventListener('touchstart', e => { active = true; apply(getVal(e.touches[0].clientX)); e.preventDefault(); }, { passive: false });
+  document.addEventListener('mousemove',  e => { if (active) apply(getVal(e.clientX)); });
+  document.addEventListener('touchmove',  e => { if (active) apply(getVal(e.touches[0].clientX)); }, { passive: true });
+  document.addEventListener('mouseup',    () => { active = false; });
+  document.addEventListener('touchend',   () => { active = false; });
+  document.addEventListener('touchcancel',() => { active = false; });
+}
+
+/* Centre all servos */
+function centreAllServos() {
+  ajBasePos = 90; ajArmPos = 90; ajBaseAtStrokeStart = 90; ajArmAtStrokeStart = 90;
+  ajTx = 0; ajTy = 0; ajAxisLock = null;
+  ['aj-base','aj-arm'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = '90';
+  });
+  ['aj-bfill','aj-afill'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.width = '50%';
+  });
+  const gf = document.getElementById('aj-gfill');   if (gf) gf.style.width = '50%';
+  const gt = document.getElementById('aj-gthumb');   if (gt) gt.style.left  = '50%';
+  const gv = document.getElementById('aj-gval');     if (gv) gv.textContent = '90°';
+  const cv = document.getElementById('cvArmJoy');    if (cv) drawArmJoy(cv, 0, 0, false, null);
+  ajClaw = 90; armInit.base = armInit.arm = armInit.claw = true;
+  send('A,' + nextSeq() + ',90,90,90');
+}
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('panel-armjoy').classList.contains('show')) {
+    resizeArmJoy();
+  }
+});
+
+function sendArmWS() {
+  var b = armInit.base ? clampServo('base', ajBase) : -1;
+  var a = armInit.arm  ? clampServo('arm',  ajArm)  : -1;
+  var c = armInit.claw ? clampServo('claw', ajClaw) : -1;
   if (b === -1 && a === -1 && c === -1) return;
   send('A,' + nextSeq() + ',' + b + ',' + a + ',' + c);
 }
 
-function centreArm() {
-  ['base', 'arm', 'claw'].forEach(function(ax) {
-    var h = SERVO_LIMITS[ax].home;
-    document.getElementById(ax + '-slider').value = h;
-    document.getElementById(ax + '-val').textContent = h + '°';
-    armInit[ax] = true;
-  });
-  send('A,' + nextSeq() + ',' + SERVO_LIMITS.base.home + ',' + SERVO_LIMITS.arm.home + ',' + SERVO_LIMITS.claw.home);
-}
-
-// ── show-off moves ────────────────────────────────────────────────────────────
-var activeMovBtn = null;
-function runMove(id) {
-  if (!isConn()) { toast('NOT CONNECTED'); return; }
-  var sp = parseInt(document.getElementById('mv-speed').value);
-  send('M,' + nextSeq() + ',' + id + ',' + sp);
-  if (activeMovBtn) activeMovBtn.classList.remove('run');
-  activeMovBtn = event.currentTarget;
-  activeMovBtn.classList.add('run');
-}
-
-// ── mode switch ───────────────────────────────────────────────────────────────
-function setMode(m) {
-  ctrlMode = m;
-  document.getElementById('ms-strafe').classList.toggle('on', m === 'strafe');
-  document.getElementById('ms-armjoy').classList.toggle('on', m === 'armjoy');
-  document.getElementById('ctx-strafe').style.display = m === 'strafe' ? 'flex' : 'none';
-  document.getElementById('ctx-armjoy').style.display = m === 'armjoy' ? 'flex' : 'none';
-  // Release left joystick if switching away from strafe while it owns drive
-  if (m !== 'strafe' && driveOwner === 'left') {
-    joy.left.touched = false;
-    joy.left.x = joy.left.y = 0;
-    document.getElementById('lknob').style.transform = 'translate(-50%,-50%)';
-    document.getElementById('lring').classList.remove('active');
-    onRelease('left');
-  }
-}
-
-// ── tabs ──────────────────────────────────────────────────────────────────────
-function showTab(name) {
-  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
-  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-  document.getElementById(name + '-panel').classList.add('active');
-  document.getElementById('tab-' + name).classList.add('active');
-}
-
-// ── UI helpers ────────────────────────────────────────────────────────────────
-function setDot(state) {
-  var d = document.getElementById('dot');
-  d.className = state;
-  d.title = state;
-}
-function setConnLbl(txt) {
-  var el = document.getElementById('conn-lbl');
-  if (el) el.textContent = txt;
-}
-
-var ttTimer = null;
-function toast(msg) {
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.opacity = '1';
-  if (ttTimer) clearTimeout(ttTimer);
-  ttTimer = setTimeout(function() { el.style.opacity = '0'; }, 2500);
-}
-
-// ── init ──────────────────────────────────────────────────────────────────────
-setupJoy('lring', 'lknob', 'left');
-setupJoy('rring', 'rknob', 'right');
-connect();
+initArmJoyEvents();
 </script>
 </body>
 </html>

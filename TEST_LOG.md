@@ -230,6 +230,51 @@ All of the following must be true before moving to Milestone 2:
 
 ---
 
+## UI-BASELINE-RESTORE-03 — Exact mockup copied + WebSocket controls ported (PENDING browser/hardware verification)
+
+```
+Date: 2026-04-30
+Milestone: UI Baseline Recovery Gate (pre-development gate, not a hardware milestone)
+Firmware commit: a39d154
+Web page commit: (see git log after this entry)
+Pico target: Pico W / Pico 2 W
+Battery voltage: N/A (UI-only change)
+Phone / browser: pending
+Tested feature: Documents/picobot_web_page-v1.html copied exactly to index.html;
+  WebSocket/control logic ported from working_control_wrong_ui.html.
+Expected result: Page visually matches exact reference mockup (canvas joysticks,
+  sector-lock strafe, ARM JOY canvas+gripper, show-off cards with animations,
+  fullscreen/landscape, PWA manifest); all WebSocket protocol correct.
+Actual result: Static checks passed. Browser/hardware verification pending.
+Pass / fail: PENDING (static only)
+Browser console excerpt (with timestamp): pending
+Pico serial excerpt (with timestamp): pending
+Notes:
+  - Exact copy via `cp Documents/picobot_web_page-v1.html pico/PicoBot/www/index.html`
+  - Google Fonts CDN removed (offline on Pico AP; fallback to monospace)
+  - ARM button added to topbar (DISARMED/ARMED)
+  - Connection dialog replaced with WebSocket status panel
+  - sendCmd() / sendServo() removed; no HTTP fetch calls remain
+  - WebSocket: connect(), send(), isConnected(), handleMsg()
+  - ARM/DISARM: toggleArm(), resetArm(), setArmedUI(), sendStop()
+  - visibilitychange: STOP then ARM,0
+  - Drive loop: 20 Hz D frames, 5 Hz heartbeat, onJoyTouch/onJoyRelease arbitration
+  - makeJoystick(): stream()/stopStream() replaced with joyMove()/joyRelease()
+  - Strafe canvas joystick: D,seq,f,s,r (left); expo-normalized
+  - Drive canvas joystick: D,seq,f,0,r (right); expo-curve preserved
+  - Arm joystick: A,seq,base,arm,-1 or -1,arm,-1 with armInit sentinel
+  - Gripper slider: A,seq,-1,-1,claw with armInit sentinel
+  - centreAllServos: A,seq,90,90,90
+  - selMove: M,seq,move_id,50 (single frame, no HTTP streaming)
+  - stopMove: STOP,seq
+  - Servo limits: base 0-180, arm 40-140, claw 40-140
+Next action: Open pico/PicoBot/www/index.html in browser and verify:
+  splash screen, canvas joysticks, ARM JOY panel, show-off cards render.
+  Then compile .mpy, upload to Pico, and test with wheels lifted.
+```
+
+---
+
 ## UI-BASELINE-RESTORE-02 — UI Baseline Recovered; WebSocket Controls Re-ported (PENDING hardware/browser verification)
 
 ```
