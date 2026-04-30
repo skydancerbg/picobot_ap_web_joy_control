@@ -230,6 +230,37 @@ All of the following must be true before moving to Milestone 2:
 
 ---
 
+## UI-BASELINE-RESTORE-02 — UI Baseline Recovered; WebSocket Controls Re-ported (PENDING hardware/browser verification)
+
+```
+Date: 2026-04-30
+Milestone: UI Baseline Recovery Gate (pre-development gate, not a hardware milestone)
+Firmware commit: 67318d8
+Web page commit: (see git log after this entry)
+Pico target: Pico W / Pico 2 W
+Battery voltage: N/A (UI-only change)
+Phone / browser: pending
+Tested feature: Exact neon mockup page restored as index.html; WebSocket/control logic
+  re-ported from prior working_control_wrong_ui.html reference.
+Expected result: Page visually matches original advanced mockup; all required WebSocket
+  control behaviour verified by static checks; no HTTP GET movement commands active.
+Actual result: Static checks passed. Browser/hardware verification pending.
+Pass / fail: PENDING (static only)
+Browser console excerpt (with timestamp): pending
+Pico serial excerpt (with timestamp): pending
+Notes: Documents/picobot_web_page-v1.html was absent from repo. Current index.html
+  was confirmed complete (splash, neon topbar, CONTROL/SHOW OFF tabs, STRAFE/ARM JOY
+  mode switch, mecanum and drive joysticks, arm sliders, show-off grid). Previous
+  wrong-UI state saved to working_control_wrong_ui.html from HEAD~1 for reference.
+  All static checks passed: no banned HTTP endpoints, WebSocket send helpers present
+  (D/A/STOP/ARM/M), servo limits correct (base 0-180, arm 40-140, claw 40-140),
+  centreArm sends 90,90,90, visibilitychange sends STOP then ARM,0, readyState===1.
+Next action: Open pico/PicoBot/www/index.html in browser and verify visual layout.
+  Then upload to Pico and verify robot control over WebSocket.
+```
+
+---
+
 ## UI-RESTORE-01 — Advanced UI Regression Restoration (PENDING hardware verification)
 
 ```

@@ -733,6 +733,26 @@ Do not increase PCA9685 servo PWM frequency above normal hobby-servo 50 Hz unles
 
 ## 16. Milestones
 
+### UI Baseline Recovery Gate
+
+Before resuming any robot-feature development, confirm that `pico/PicoBot/www/index.html` is the exact neon/cyber advanced control page (not a manually-reconstructed or simplified substitute). Required checks:
+
+- Splash screen present (`#splash`).
+- Topbar with `PICOBOT` title, dot, ARM/DISARM button, STOP button.
+- CONTROL / SHOW OFF tabs.
+- STRAFE / ARM JOY mode switch.
+- Left mecanum joystick + arm sliders (ARM JOY mode).
+- Right drive joystick.
+- Show-off grid (10 move buttons + speed slider).
+- WebSocket send helpers active for D, A, STOP, ARM, M.
+- No HTTP GET movement endpoints (`/forward`, `/back`, `/left`, `/right`, `/show_*`).
+- `socket.readyState === 1` used for connection check.
+- `visibilitychange` → hidden sends STOP then ARM,0.
+
+Pass: all static checks above confirmed; browser visual check completed.
+
+---
+
 ### Milestone 0 — Repo and docs
 
 Create repo structure and required files. Verify `Documents/` is not in upload manifest. Add `tools/compile_mpy.md`.
