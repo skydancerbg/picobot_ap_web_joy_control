@@ -1239,8 +1239,10 @@ function makeJoystick(cvId, isStrafe) {
       const cr = Math.min(dist, R);
       tx = Math.cos(ta) * cr; ty = Math.sin(ta) * cr;
       drawStrafe(cv, tx, ty, locked, cr / R);
-      /* Store normalized left-joy position for sendDrive() */
-      joyMove(tx / R, -ty / R);
+      /* Remap active range [DEAD→1] to [0→1] then apply expo so speed starts
+         near zero at the sector boundary instead of jumping to 44% instantly. */
+      const mag = expo((frac - DEAD) / (1 - DEAD));
+      joyMove(Math.cos(ta) * mag, -Math.sin(ta) * mag);
     } else {
       const cr = Math.min(dist, R);
       tx = dx / dist * cr; ty = dy / dist * cr;
