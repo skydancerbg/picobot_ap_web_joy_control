@@ -553,7 +553,7 @@ canvas { display: block; touch-action: none; }
         <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6zm7.2-2.4l1.5-1.2-1.5-2.6-1.9.8a6.8 6.8 0 00-1.4-.8L15.6 7H12.4l-.3 1.8a6.8 6.8 0 00-1.4.8l-1.9-.8-1.5 2.6 1.5 1.2a6.6 6.6 0 000 1.6l-1.5 1.2 1.5 2.6 1.9-.8c.4.3.9.6 1.4.8l.3 1.8h3.2l.3-1.8c.5-.2 1-.5 1.4-.8l1.9.8 1.5-2.6-1.5-1.2a6.6 6.6 0 000-1.6z"/></svg>
       </div>
       <div class="tb-sep"></div>
-      <button id="arm-btn" onclick="toggleArm()" style="height:28px;padding:0 10px;border-radius:6px;border:1px solid #334;background:transparent;color:#556;font-family:'Orbitron',monospace;font-size:clamp(7px,1.1vw,9px);font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;">DISARMED</button>
+      <button id="arm-btn" onclick="toggleArm()" style="height:28px;padding:0 10px;border-radius:6px;border:1px solid #00e5ff88;background:transparent;color:#00e5ff;font-family:'Orbitron',monospace;font-size:clamp(7px,1.1vw,9px);font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;">ARM</button>
       <div class="tb-sep"></div>
       <div class="wifi-pill disconnected" id="status-pill" onclick="pillClicked()">
         <div id="pill-dot"></div>
@@ -774,9 +774,9 @@ function setArmedUI(val) {
   armed = val;
   var btn = document.getElementById('arm-btn');
   if (btn) {
-    btn.textContent = val ? 'ARMED' : 'DISARMED';
-    btn.style.borderColor = val ? 'var(--green)' : '#334';
-    btn.style.color       = val ? 'var(--green)' : '#556';
+    btn.textContent = val ? 'DISARM' : 'ARM';
+    btn.style.borderColor = val ? 'var(--green)' : '#00e5ff88';
+    btn.style.color       = val ? 'var(--green)' : '#00e5ff';
   }
 }
 
@@ -1856,6 +1856,7 @@ function initGripperSlider() {
 
 /* Centre all servos */
 function centreAllServos() {
+  if (!armed) return;
   ajBase = 90; ajArm = 90;
   ajBasePos = 90; ajArmPos = 90; ajBaseAtStrokeStart = 90; ajArmAtStrokeStart = 90;
   ajTx = 0; ajTy = 0; ajAxisLock = null;
@@ -1880,6 +1881,7 @@ window.addEventListener('resize', () => {
 });
 
 function sendArmWS() {
+  if (!armed) return;
   var b = armInit.base ? clampServo('base', ajBase) : -1;
   var a = armInit.arm  ? clampServo('arm',  ajArm)  : -1;
   var c = armInit.claw ? clampServo('claw', ajClaw) : -1;
